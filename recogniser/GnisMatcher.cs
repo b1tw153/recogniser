@@ -312,7 +312,7 @@ namespace recogniser
             return result;
         }
 
-        public GnisMatchResult? FindBestMatch(List<GnisMatchResult> matchResults)
+        public static GnisMatchResult? FindBestMatch(List<GnisMatchResult> matchResults)
         {
             // find all the relations in the match result
             List<GnisMatchResult> relationMatches = matchResults.FindAll(match => match.osmFeature is OsmRelation);
@@ -364,10 +364,10 @@ namespace recogniser
         [GeneratedRegex("^(.*) Census Designated Place$")]
         private static partial Regex CensusDesignatedPlaceRegex();
 
-        private GnisNameMatch MatchGnisFeatureName(GnisRecord gnisRecord, OsmFeature osmFeature, out string nameKey)
+        private static GnisNameMatch MatchGnisFeatureName(GnisRecord gnisRecord, OsmFeature osmFeature, out string nameKey)
         {
             OsmTagCollection tags = osmFeature.GetTagCollection();
-            GnisNameMatch result = GnisNameMatch.NOT_PROCESSED;
+            GnisNameMatch result /*= GnisNameMatch.NOT_PROCESSED*/;
 
             // no tags
             if (tags == null)
@@ -424,6 +424,7 @@ namespace recogniser
                 }
             }
 
+            // for census designated places
             if (gnisRecord.FeatureClass.Equals("Census"))
             {
                 // ... Census Designated Place
@@ -449,7 +450,7 @@ namespace recogniser
             return GnisNameMatch.NO_MATCH;
         }
 
-        private GnisNameMatch MatchNameTags(String featureName, OsmTagCollection tags, out string nameKey)
+        private static GnisNameMatch MatchNameTags(String featureName, OsmTagCollection tags, out string nameKey)
         {
             const double levRatio = 0.22;
 
@@ -818,7 +819,7 @@ namespace recogniser
         [GeneratedRegex(@"^\d+$")]
         private static partial Regex NumberPattern();
 
-        private GnisFeatureIdMatch MatchGnisFeatureId(GnisRecord gnisRecord, OsmFeature osmFeature, out string featureIdKey)
+        private static GnisFeatureIdMatch MatchGnisFeatureId(GnisRecord gnisRecord, OsmFeature osmFeature, out string featureIdKey)
         {
             OsmTagCollection tags = osmFeature.GetTagCollection();
 
@@ -966,7 +967,7 @@ namespace recogniser
             return GnisFeatureIdMatch.NO_MATCH;
         }
 
-        private GnisFeatureIdMatch WikidataFeatureIdMatch(GnisRecord gnisRecord, OsmFeature osmFeature)
+        private static GnisFeatureIdMatch WikidataFeatureIdMatch(GnisRecord gnisRecord, OsmFeature osmFeature)
         {
             // if the feature in OSM has a Wikidata ID, try to use that to get the GNIS feature ID
             if (osmFeature.GetTagCollection().ContainsKey("wikidata"))

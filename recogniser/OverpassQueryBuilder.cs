@@ -129,7 +129,7 @@ namespace recogniser
             return query.ToString();
         }
 
-        public string BuildFeatureIdQuery(GnisRecord gnisRecord)
+        public static string BuildFeatureIdQuery(GnisRecord gnisRecord)
         {
             // use a 20 km bounding box
             string areaFilter = string.Join(",", MakeBoundingBox(gnisRecord.Primary.Latitude, gnisRecord.Primary.Longitude, 20000));
@@ -190,7 +190,7 @@ namespace recogniser
             return query.ToString();
         }
 
-        public string BuildEnclosureQuery(GnisRecord gnisRecord)
+        public static string BuildEnclosureQuery(GnisRecord gnisRecord)
         {
             return $"is_in({gnisRecord.PrimaryLat},{gnisRecord.PrimaryLon})->.a; wr(pivot.a); (._; - rel(if: abs(t[\"admin_level\"]) < 6)._;); (._; node(w);); out meta;";
         }
@@ -362,7 +362,7 @@ namespace recogniser
 
         public XOsmData? SendQuery(string overpassQuery)
         {
-            MemoryStream memoryStream = new MemoryStream();
+            MemoryStream memoryStream = new();
 
             // sometimes Overpass balks under heavy load
             // use an exponential fallback and retry
@@ -418,7 +418,7 @@ namespace recogniser
             return overpassSerializer.Deserialize(response.Content.ReadAsStream()) as XOsmData;
         }
 
-        internal string BuildObjectQuery(string type, long id)
+        internal static string BuildObjectQuery(string type, long id)
         {
             if ("node".Equals(type))
                 return $"node({id}); out meta;";

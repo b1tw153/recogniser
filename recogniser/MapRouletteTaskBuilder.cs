@@ -183,7 +183,7 @@ namespace recogniser
             return JsonSerializer.Serialize(task);
         }
 
-        private GeoJsonFeature ConvertToGeoJsonFeature(GnisRecord gnisRecord)
+        private static GeoJsonFeature ConvertToGeoJsonFeature(GnisRecord gnisRecord)
         {
             GeoJsonFeature feature = new();
 
@@ -215,7 +215,7 @@ namespace recogniser
             return feature;
         }
 
-        private GeoJsonFeature ConvertToGeoJsonFeature(OsmFeature osmFeature, GnisRecord gnisRecord)
+        private static GeoJsonFeature ConvertToGeoJsonFeature(OsmFeature osmFeature, GnisRecord gnisRecord)
         {
             GeoJsonFeature feature = new();
 
