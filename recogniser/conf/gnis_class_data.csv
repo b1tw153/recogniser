@@ -40,7 +40,7 @@ Military,TRUE,FALSE,point|area,landuse=military,,,multipolygon|boundary
 Mine,FALSE,FALSE,point|area,historic=mine|landuse=quarry,,,multipolygon
 Oilfield,FALSE,FALSE,point|area,man_made=oilfield|waterway=offshore_field|industrial=hydrocarbon_field,,,multipolygon
 Park,FALSE,FALSE,point|area,leisure=park|leisure=*|historic=*,,,multipolygon
-Pillar,TRUE,FALSE,point,natural=cliff|natural=spire,,,
+Pillar,TRUE,FALSE,point,natural=rock|natural=cliff|natural=spire|natural=peak,,,
 Plain,TRUE,FALSE,point,natural=plain,,,
 Populated Place,TRUE,FALSE,point|area,place=locality|place=hamlet|place=village|place=town|place=neighbourhood|place=quarter|place=suburb|place=borough|place=city|place=municipality|landuse=residential,,boundary=*|building=*|highway=*|waterway=*|power=*,multipolygon
 Post Office,FALSE,FALSE,point|area,amenity=post_office,,,multipolygon|building

@@ -40,60 +40,66 @@ namespace recogniser
 
         public void Create(OsmFeature osmFeature)
         {
-            CreateSection ??= new ChangeSection();
-
-            // if it's not already in the create list
-            if (osmFeature is OsmNode node && !CreateSection.Nodes.Contains(node))
+            lock (this)
             {
-                CreateSection.Nodes.Add(node);
+                CreateSection ??= new ChangeSection();
 
-                // if we already had it in the modify list, remove it
-                if (ModifySection?.Nodes.Contains(node) ?? false)
-                    ModifySection.Nodes.Remove(node);
-            }
+                // if it's not already in the create list
+                if (osmFeature is OsmNode node && !CreateSection.Nodes.Contains(node))
+                {
+                    CreateSection.Nodes.Add(node);
 
-            // if it's not already in the create list
-            if (osmFeature is OsmWay way && !CreateSection.Ways.Contains(way))
-            {
-                CreateSection.Ways.Add(way);
+                    // if we already had it in the modify list, remove it
+                    if (ModifySection?.Nodes.Contains(node) ?? false)
+                        ModifySection.Nodes.Remove(node);
+                }
 
-                // if we already had it in the modify list, remove it
-                if (ModifySection?.Ways.Contains(way) ?? false)
-                    ModifySection.Ways.Remove(way);
-            }
+                // if it's not already in the create list
+                if (osmFeature is OsmWay way && !CreateSection.Ways.Contains(way))
+                {
+                    CreateSection.Ways.Add(way);
 
-            // if it's not already in the create list
-            if (osmFeature is OsmRelation relation && !CreateSection.Relations.Contains(relation))
-            {
-                CreateSection.Relations.Add(relation);
+                    // if we already had it in the modify list, remove it
+                    if (ModifySection?.Ways.Contains(way) ?? false)
+                        ModifySection.Ways.Remove(way);
+                }
 
-                // if we already had it in the modify list, remove it
-                if (ModifySection?.Relations.Contains(relation) ?? false)
-                    ModifySection.Relations.Remove(relation);
+                // if it's not already in the create list
+                if (osmFeature is OsmRelation relation && !CreateSection.Relations.Contains(relation))
+                {
+                    CreateSection.Relations.Add(relation);
+
+                    // if we already had it in the modify list, remove it
+                    if (ModifySection?.Relations.Contains(relation) ?? false)
+                        ModifySection.Relations.Remove(relation);
+                }
             }
         }
 
         public void Modify(OsmFeature osmFeature)
         {
-            ModifySection ??= new ChangeSection();
+            lock (this)
+            {
+                ModifySection ??= new ChangeSection();
 
-            // if it's not already in the modify or create list
-            if (osmFeature is OsmNode node
-                && !ModifySection.Nodes.Contains(node)
-                && !(CreateSection?.Nodes.Contains(node) ?? false))
-                ModifySection.Nodes.Add(node);
+                // if it's not already in the modify or create list
+                if (osmFeature is OsmNode node
+                    && !ModifySection.Nodes.Contains(node)
+                    && !(CreateSection?.Nodes.Contains(node) ?? false))
+                    ModifySection.Nodes.Add(node);
 
-            // if it's not already in the modify or create list
-            if (osmFeature is OsmWay way
-                && !ModifySection.Ways.Contains(way)
-                && !(CreateSection?.Ways.Contains(way) ?? false))
-                ModifySection.Ways.Add(way);
+                // if it's not already in the modify or create list
+                if (osmFeature is OsmWay way
+                    && !ModifySection.Ways.Contains(way)
+                    && !(CreateSection?.Ways.Contains(way) ?? false))
+                    ModifySection.Ways.Add(way);
 
-            // if it's not already in the modify or create list
-            if (osmFeature is OsmRelation relation
-                && !ModifySection.Relations.Contains(relation)
-                && !(CreateSection?.Relations.Contains(relation) ?? false))
-                ModifySection.Relations.Add(relation);
+                // if it's not already in the modify or create list
+                if (osmFeature is OsmRelation relation
+                    && !ModifySection.Relations.Contains(relation)
+                    && !(CreateSection?.Relations.Contains(relation) ?? false))
+                    ModifySection.Relations.Add(relation);
+            }
         }
 
         public string Serialize()
