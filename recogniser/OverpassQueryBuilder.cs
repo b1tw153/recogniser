@@ -5,7 +5,7 @@ using System.Xml.Serialization;
 
 namespace recogniser
 {
-    public class OverpassQueryBuilder
+    public partial class OverpassQueryBuilder
     {
         private readonly GnisClassData gnisClassData;
         private readonly XmlSerializer overpassSerializer = new(typeof(XOsmData));
@@ -170,7 +170,7 @@ namespace recogniser
 
             // escape quotes in the feature name
             string escapedFeatureName = gnisRecord.FeatureName.Contains('"')
-                ? Regex.Replace(gnisRecord.FeatureName, "\"", "\\\"")
+                ? EmbeddedQuoteRegex().Replace(gnisRecord.FeatureName, "\\\"")
                 : gnisRecord.FeatureName;
 
             // for each of the primary tags
@@ -195,6 +195,9 @@ namespace recogniser
             return $"is_in({gnisRecord.PrimaryLat},{gnisRecord.PrimaryLon})->.a; wr(pivot.a); (._; - rel(if: abs(t[\"admin_level\"]) < 6)._;); (._; node(w);); out meta;";
         }
 
+        [GeneratedRegex("\"")]
+        private static partial Regex EmbeddedQuoteRegex();
+
         public string BuildSecondQuery(GnisRecord gnisRecord)
         {
             StringBuilder query = new();
@@ -206,12 +209,12 @@ namespace recogniser
             if (!gnisRecord.HasSource())
             {
                 // use a 20 km bounding box
-                areaFilter = string.Join(",", OverpassQueryBuilder.MakeBoundingBox(gnisRecord.Primary.Latitude, gnisRecord.Primary.Longitude, 20000));
+                areaFilter = string.Join(",", MakeBoundingBox(gnisRecord.Primary.Latitude, gnisRecord.Primary.Longitude, 20000));
             }
             else
             {
                 // use the extent of the feature as the bounding box
-                areaFilter = string.Join(",", OverpassQueryBuilder.MakeEnclosingBox(gnisRecord.Primary.Latitude, gnisRecord.Primary.Longitude, gnisRecord.Source.Latitude, gnisRecord.Source.Longitude));
+                areaFilter = string.Join(",", MakeEnclosingBox(gnisRecord.Primary.Latitude, gnisRecord.Primary.Longitude, gnisRecord.Source.Latitude, gnisRecord.Source.Longitude));
             }
 
             string osmTypes;
@@ -250,7 +253,7 @@ namespace recogniser
 
             // escape quotes in the feature name
             string escapedFeatureName = gnisRecord.FeatureName.Contains('"')
-                ? Regex.Replace(gnisRecord.FeatureName, "\"", "\\\"")
+                ? EmbeddedQuoteRegex().Replace(gnisRecord.FeatureName, "\\\"")
                 : gnisRecord.FeatureName;
 
             // for each of the primary tags

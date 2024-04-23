@@ -357,6 +357,13 @@ namespace recogniser
             return null;
         }
 
+        [GeneratedRegex("^\\w+ of (.*)$")]
+        private static partial Regex CivilOfRegex();
+
+
+        [GeneratedRegex("^(.*) Census Designated Place$")]
+        private static partial Regex CensusDesignatedPlaceRegex();
+
         private GnisNameMatch MatchGnisFeatureName(GnisRecord gnisRecord, OsmFeature osmFeature, out string nameKey)
         {
             OsmTagCollection tags = osmFeature.GetTagCollection();
@@ -400,7 +407,7 @@ namespace recogniser
             if (gnisRecord.FeatureClass.Equals("Census") || gnisRecord.FeatureClass.Equals("Civil") || gnisRecord.FeatureClass.Equals("Populated Place"))
             {
                 // Township/Town/City/Village/* of ...
-                Regex commonPrefixes = new Regex("^\\w+ of (.*)$");
+                Regex commonPrefixes = CivilOfRegex();
 
                 // see if the name has one of the common prefixes
                 MatchCollection matches = commonPrefixes.Matches(gnisRecord.FeatureName);
@@ -420,7 +427,7 @@ namespace recogniser
             if (gnisRecord.FeatureClass.Equals("Census"))
             {
                 // ... Census Designated Place
-                Regex commonSuffixes = new Regex("^(.*) Census Designated Place$");
+                Regex commonSuffixes = CensusDesignatedPlaceRegex();
 
                 // see if the name has one of the common suffixes
                 MatchCollection matches = commonSuffixes.Matches(gnisRecord.FeatureName);
@@ -938,13 +945,11 @@ namespace recogniser
                 }
             }
 
-            /*
             if (WikidataFeatureIdMatch(gnisRecord, osmFeature) == GnisFeatureIdMatch.FEATURE_ID_WIKIDATA_MATCH)
             {
                 featureIdKey = string.Empty;
                 return GnisFeatureIdMatch.FEATURE_ID_WIKIDATA_MATCH;
             }
-            */
 
             string[] wikidataGnisIds = WikidataLookup.GetGnisIds(osmFeature);
             foreach (string wikidataGnisId in wikidataGnisIds)
@@ -1114,10 +1119,10 @@ namespace recogniser
             {
                 foreach (OsmTag osmFeatureTag in matchResult.osmFeature.GetTagCollection())
                 {
-                    if (newRelationTags.ContainsKey(osmFeatureTag.Key))
+                    if (newRelationTags.TryGetValue(osmFeatureTag.Key, out string? relationTagValue))
                     {
                         // if the value differs from other objects
-                        if (!newRelationTags[osmFeatureTag.Key].Equals(osmFeatureTag.Value))
+                        if (!relationTagValue.Equals(osmFeatureTag.Value))
                         {
                             // use an empty value to indicate that this tag will not be added to the relation
                             newRelationTags[osmFeatureTag.Key] = string.Empty;
@@ -1162,6 +1167,5 @@ namespace recogniser
 
             return newRelation;
         }
-
     }
 }
