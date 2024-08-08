@@ -28,7 +28,7 @@
             _osmChangeBuilder.AddToOsmChange(_osmChange, gnisRecord);
         }
 
-        public void AddToOsmChange(GnisRecord gnisRecord, List<GnisMatchResult> matchResults, List<GnisValidationResult> validationResults)
+        public static void AddToOsmChange(GnisRecord gnisRecord, List<GnisMatchResult> matchResults, List<GnisValidationResult> validationResults)
         {
             // this is too complex for an automated change
             // it needs human intervention

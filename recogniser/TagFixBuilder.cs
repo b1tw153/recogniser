@@ -37,7 +37,7 @@
                 return null;
         }
 
-        private void DeleteExtraGnisTags(OsmFeature osmFeature, List<TagFixDependentOperation> operations)
+        private static void DeleteExtraGnisTags(OsmFeature osmFeature, List<TagFixDependentOperation> operations)
         {
             List<string> tagsToDelete = new();
 
@@ -130,7 +130,7 @@
             return true;
         }
 
-        private bool ModifyName(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult, List<TagFixDependentOperation> operations)
+        private static bool ModifyName(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult, List<TagFixDependentOperation> operations)
         {
             TagFixDependentOperation operation;
             OsmTagCollection tags = matchResult.osmFeature.GetTagCollection();
@@ -206,7 +206,7 @@
             }
         }
 
-        private bool ModifyFeatureId(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult, List<TagFixDependentOperation> operations)
+        private static bool ModifyFeatureId(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult, List<TagFixDependentOperation> operations)
         {
             TagFixDependentOperation operation;
             OsmTagCollection tags = matchResult.osmFeature.GetTagCollection();

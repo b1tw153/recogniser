@@ -312,7 +312,7 @@ namespace recogniser
             return result;
         }
 
-        public GnisMatchResult? FindBestMatch(List<GnisMatchResult> matchResults)
+        public static GnisMatchResult? FindBestMatch(List<GnisMatchResult> matchResults)
         {
             // find all the relations in the match result
             List<GnisMatchResult> relationMatches = matchResults.FindAll(match => match.osmFeature is OsmRelation);
@@ -357,10 +357,17 @@ namespace recogniser
             return null;
         }
 
-        private GnisNameMatch MatchGnisFeatureName(GnisRecord gnisRecord, OsmFeature osmFeature, out string nameKey)
+        [GeneratedRegex("^\\w+ of (.*)$")]
+        private static partial Regex CivilOfRegex();
+
+
+        [GeneratedRegex("^(.*) Census Designated Place$")]
+        private static partial Regex CensusDesignatedPlaceRegex();
+
+        private static GnisNameMatch MatchGnisFeatureName(GnisRecord gnisRecord, OsmFeature osmFeature, out string nameKey)
         {
             OsmTagCollection tags = osmFeature.GetTagCollection();
-            GnisNameMatch result = GnisNameMatch.NOT_PROCESSED;
+            GnisNameMatch result /*= GnisNameMatch.NOT_PROCESSED*/;
 
             // no tags
             if (tags == null)
@@ -400,7 +407,7 @@ namespace recogniser
             if (gnisRecord.FeatureClass.Equals("Census") || gnisRecord.FeatureClass.Equals("Civil") || gnisRecord.FeatureClass.Equals("Populated Place"))
             {
                 // Township/Town/City/Village/* of ...
-                Regex commonPrefixes = new Regex("^\\w+ of (.*)$");
+                Regex commonPrefixes = CivilOfRegex();
 
                 // see if the name has one of the common prefixes
                 MatchCollection matches = commonPrefixes.Matches(gnisRecord.FeatureName);
@@ -417,10 +424,11 @@ namespace recogniser
                 }
             }
 
+            // for census designated places
             if (gnisRecord.FeatureClass.Equals("Census"))
             {
                 // ... Census Designated Place
-                Regex commonSuffixes = new Regex("^(.*) Census Designated Place$");
+                Regex commonSuffixes = CensusDesignatedPlaceRegex();
 
                 // see if the name has one of the common suffixes
                 MatchCollection matches = commonSuffixes.Matches(gnisRecord.FeatureName);
@@ -442,7 +450,7 @@ namespace recogniser
             return GnisNameMatch.NO_MATCH;
         }
 
-        private GnisNameMatch MatchNameTags(String featureName, OsmTagCollection tags, out string nameKey)
+        private static GnisNameMatch MatchNameTags(String featureName, OsmTagCollection tags, out string nameKey)
         {
             const double levRatio = 0.22;
 
@@ -793,7 +801,7 @@ namespace recogniser
             return GnisGeometryMatch.NO_MATCH;
         }
 
-        private static readonly ConcurrentDictionary<string, string> wikidataCache = new();
+//      private static readonly ConcurrentDictionary<string, string> wikidataCache = new();
         private static readonly string primaryKey = "gnis:feature_id";
         private static readonly ImmutableHashSet<string> synonymousKeys = ImmutableHashSet.Create( new string[] 
         {
@@ -811,7 +819,7 @@ namespace recogniser
         [GeneratedRegex(@"^\d+$")]
         private static partial Regex NumberPattern();
 
-        private GnisFeatureIdMatch MatchGnisFeatureId(GnisRecord gnisRecord, OsmFeature osmFeature, out string featureIdKey)
+        private static GnisFeatureIdMatch MatchGnisFeatureId(GnisRecord gnisRecord, OsmFeature osmFeature, out string featureIdKey)
         {
             OsmTagCollection tags = osmFeature.GetTagCollection();
 
@@ -961,7 +969,8 @@ namespace recogniser
             return GnisFeatureIdMatch.NO_MATCH;
         }
 
-        private GnisFeatureIdMatch WikidataFeatureIdMatch(GnisRecord gnisRecord, OsmFeature osmFeature)
+        /*
+        private static GnisFeatureIdMatch WikidataFeatureIdMatch(GnisRecord gnisRecord, OsmFeature osmFeature)
         {
             // if the feature in OSM has a Wikidata ID, try to use that to get the GNIS feature ID
             if (osmFeature.GetTagCollection().ContainsKey("wikidata"))
@@ -1037,6 +1046,7 @@ namespace recogniser
             }
             return GnisFeatureIdMatch.NO_MATCH;
         }
+        */
 
         internal void ConsolidateMatches(GnisRecord gnisRecord, List<GnisMatchResult> matchResults, List<GnisValidationResult> validationResults, GnisMatchResult? newMatchResult, GnisValidationResult? newValidationResult)
         {
@@ -1114,10 +1124,10 @@ namespace recogniser
             {
                 foreach (OsmTag osmFeatureTag in matchResult.osmFeature.GetTagCollection())
                 {
-                    if (newRelationTags.ContainsKey(osmFeatureTag.Key))
+                    if (newRelationTags.TryGetValue(osmFeatureTag.Key, out string? relationTagValue))
                     {
                         // if the value differs from other objects
-                        if (!newRelationTags[osmFeatureTag.Key].Equals(osmFeatureTag.Value))
+                        if (!relationTagValue.Equals(osmFeatureTag.Value))
                         {
                             // use an empty value to indicate that this tag will not be added to the relation
                             newRelationTags[osmFeatureTag.Key] = string.Empty;
@@ -1162,6 +1172,5 @@ namespace recogniser
 
             return newRelation;
         }
-
     }
 }

@@ -274,7 +274,7 @@ namespace recogniser
                             overpassQuery = overpassQueryBuilder.BuildProximityQuery(gnisRecord);
                         else
                             // build a query for the specific OSM feature
-                            overpassQuery = overpassQueryBuilder.BuildObjectQuery(erratum.Use.Type, erratum.Use.Ref);
+                            overpassQuery = OverpassQueryBuilder.BuildObjectQuery(erratum.Use.Type, erratum.Use.Ref);
 
                         Verbose.WriteLine(overpassQuery);
 
@@ -399,7 +399,7 @@ namespace recogniser
                     }
                     else if (!_skipMatches)
                     {
-                        GnisMatchResult? bestResult = _gnisMatcher.FindBestMatch(matchResults);
+                        GnisMatchResult? bestResult = GnisMatcher.FindBestMatch(matchResults);
                         if (bestResult != null)
                         {
                             int index = matchResults.IndexOf(bestResult);

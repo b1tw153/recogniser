@@ -122,7 +122,7 @@
             }
         }
 
-        private void DeleteExtraGnisTags(OsmFeature osmFeature)
+        private static void DeleteExtraGnisTags(OsmFeature osmFeature)
         {
             OsmTagCollection tags = osmFeature.GetTagCollection();
 
