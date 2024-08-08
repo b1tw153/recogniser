@@ -801,7 +801,7 @@ namespace recogniser
             return GnisGeometryMatch.NO_MATCH;
         }
 
-        private static readonly ConcurrentDictionary<string, string> wikidataCache = new();
+//      private static readonly ConcurrentDictionary<string, string> wikidataCache = new();
         private static readonly string primaryKey = "gnis:feature_id";
         private static readonly ImmutableHashSet<string> synonymousKeys = ImmutableHashSet.Create( new string[] 
         {
@@ -946,11 +946,13 @@ namespace recogniser
                 }
             }
 
+            /*
             if (WikidataFeatureIdMatch(gnisRecord, osmFeature) == GnisFeatureIdMatch.FEATURE_ID_WIKIDATA_MATCH)
             {
                 featureIdKey = string.Empty;
                 return GnisFeatureIdMatch.FEATURE_ID_WIKIDATA_MATCH;
             }
+            */
 
             string[] wikidataGnisIds = WikidataLookup.GetGnisIds(osmFeature);
             foreach (string wikidataGnisId in wikidataGnisIds)
@@ -967,6 +969,7 @@ namespace recogniser
             return GnisFeatureIdMatch.NO_MATCH;
         }
 
+        /*
         private static GnisFeatureIdMatch WikidataFeatureIdMatch(GnisRecord gnisRecord, OsmFeature osmFeature)
         {
             // if the feature in OSM has a Wikidata ID, try to use that to get the GNIS feature ID
@@ -1043,6 +1046,7 @@ namespace recogniser
             }
             return GnisFeatureIdMatch.NO_MATCH;
         }
+        */
 
         internal void ConsolidateMatches(GnisRecord gnisRecord, List<GnisMatchResult> matchResults, List<GnisValidationResult> validationResults, GnisMatchResult? newMatchResult, GnisValidationResult? newValidationResult)
         {
