@@ -9,9 +9,6 @@ private_data.json
 # Annyoing Mac files
 .DS_Store
 
-# VisualStudio Launch Settings
-launchSettings.json
-
 # User-specific files
 *.rsuser
 *.suo

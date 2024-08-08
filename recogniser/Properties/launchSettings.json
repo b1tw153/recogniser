@@ -1,8 +1,7 @@
 {
   "profiles": {
     "recogniser": {
-      "commandName": "Project",
-      "commandLineArgs": "--overpassUrl http://192.168.1.43/api/interpreter\r\n--progress\r\n--performance\r\n--gnisFile \\\\READYNAS\\Personal\\Documents\\OpenStreetMap\\GNIS\\Extracts\\Michigan_Stream.txt\r\n--osmChangeFile \\\\READYNAS\\Personal\\Documents\\OpenStreetMap\\GNIS\\Scratch\\Michigan_Stream.osc\r\n--mapRouletteFile \\\\READYNAS\\Personal\\Documents\\OpenStreetMap\\GNIS\\Scratch\\Michigan_Stream.geojson\r\n--skipMatches"
+      "commandName": "Project"
     }
   }
 }
