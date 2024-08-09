@@ -794,13 +794,17 @@ namespace recogniser
         }
 
         private static readonly ConcurrentDictionary<string, string> wikidataCache = new();
-        private static readonly string primaryKey = "gnis:feature_id";
+        //ROAD
+        //private static readonly string primaryKey = "gnis:feature_id";
+        private static readonly string primaryKey = "ref";
         private static readonly ImmutableHashSet<string> synonymousKeys = ImmutableHashSet.Create( new string[] 
         {
+            /*
             "gnis:id",
             "tiger:PLACENS",
             "NHD:GNIS_ID",
             "ref:gnis"
+            */
         });
 
         // private static readonly Regex valuePattern = new(@"\d+(;\d+)*");
@@ -841,12 +845,14 @@ namespace recogniser
                     return GnisFeatureIdMatch.FEATURE_ID_EXACT_MATCH;
                 }
 
+                /* ROAD - ref is not necessarily numeric
                 // exact match for gnis:feature_id tag after numeric conversion
                 if (long.Parse(gnisRecord.FeatureId) == (long.TryParse(tags[primaryKey], out parsedValue) ? parsedValue : -1))
                 {
                     featureIdKey = primaryKey;
                     return GnisFeatureIdMatch.FEATURE_ID_EXACT_NUMERIC_MATCH;
                 }
+                */
 
                 foreach (string value in primaryValue.Split(";"))
                 {
@@ -857,12 +863,14 @@ namespace recogniser
                         return GnisFeatureIdMatch.FEATURE_ID_PARTIAL_MATCH;
                     }
 
+                    /* ROAD - REF is not necessarily numeric
                     // partial match for gnis:feature_id after numeric conversion
                     if (long.Parse(gnisRecord.FeatureId) == (long.TryParse(value, out parsedValue) ? parsedValue : -1))
                     {
                         featureIdKey = primaryKey;
                         return GnisFeatureIdMatch.FEATURE_ID_PARTIAL_NUMERIC_MATCH;
                     }
+                    */
                 }
             }
 
@@ -885,6 +893,7 @@ namespace recogniser
                         return GnisFeatureIdMatch.FEATURE_ID_EXACT_MATCH_UNEXPECTED_KEY;
                 }
 
+                /* ROAD - ref is not necessarily numeric
                 if (NumberPattern().IsMatch(tag.Value))
                 {
                     // exact match for other tag after numeric conversion
@@ -901,6 +910,7 @@ namespace recogniser
                             return GnisFeatureIdMatch.FEATURE_ID_EXACT_NUMERIC_MATCH_UNEXPECTED_KEY;
                     }
                 }
+                */
 
                 // partial match for other tag
                 foreach (string value in tag.Value.Split(";"))
@@ -919,6 +929,7 @@ namespace recogniser
                             return GnisFeatureIdMatch.FEATURE_ID_PARTIAL_MATCH_UNEXPECTED_KEY;
                     }
 
+                    /* ROAD - ref is not necessarily numeric
                     if (NumberPattern().IsMatch(value))
                     {
                         // partial match for synonymous tag after numeric conversions
@@ -935,6 +946,7 @@ namespace recogniser
                                 return GnisFeatureIdMatch.FEATURE_ID_PARTIAL_NUMERIC_MATCH_UNEXPECTED_KEY;
                         }
                     }
+                    */
                 }
             }
 

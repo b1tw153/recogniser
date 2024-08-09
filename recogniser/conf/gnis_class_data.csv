@@ -53,7 +53,7 @@ School,FALSE,FALSE,point|area,amenity=school|building=school|amenity=kindergarte
 Sea,TRUE,FALSE,point|area,place=sea,,,multipolygon|water
 Slope,TRUE,FALSE,point|line|area,natural=slope,,,multipolygon
 Spring,TRUE,FALSE,point|area,natural=spring|natural=water,,,multipolygon|site|group
-Stream,TRUE,TRUE,line,waterway=stream|waterway=*,,highway=*|natural=valley|power=*,waterway
+Stream,TRUE,TRUE,line,highway=track|highway=*,,natural=*|waterway=*|power=*,route
 Summit,TRUE,FALSE,point,natural=peak|natural=volcano|natural=hill|natural=ridge,,,
 Swamp,TRUE,FALSE,area,natural=wetland,wetland=swamp|wetland=*,,multipolygon
 Tower,FALSE,FALSE,point|area,man_made=tower|man_made=communications_tower|man_made=water_tower,,,multipolygon|building

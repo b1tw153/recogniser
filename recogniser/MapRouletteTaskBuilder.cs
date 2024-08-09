@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.Design;
+using System.Text;
 using System.Text.Json;
 
 namespace recogniser
@@ -183,6 +184,24 @@ namespace recogniser
             return JsonSerializer.Serialize(task);
         }
 
+        private static long GenerateUniqueId(GnisRecord gnisRecord)
+        {
+            var input = gnisRecord.FeatureId + ";" + gnisRecord.FeatureName;
+            var sha1 = System.Security.Cryptography.SHA1.Create();
+            var hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(input));
+            byte[] suffix = new byte[8];
+            suffix[0] = (byte)(hash[hash.Length - 8] | 0x80);
+            suffix[1] = hash[hash.Length - 7];
+            suffix[2] = hash[hash.Length - 6];
+            suffix[3] = hash[hash.Length - 5];
+            suffix[4] = hash[hash.Length - 4];
+            suffix[5] = hash[hash.Length - 3];
+            suffix[6] = hash[hash.Length - 2];
+            suffix[7] = hash[hash.Length - 1];
+            long result = BitConverter.ToInt64(suffix);
+            return result;
+        }
+
         private GeoJsonFeature ConvertToGeoJsonFeature(GnisRecord gnisRecord)
         {
             GeoJsonFeature feature = new();
@@ -210,7 +229,10 @@ namespace recogniser
                 };
             }
 
+            /* ROAD - ref is not unique on its own
             feature.Id = -long.Parse(gnisRecord.FeatureId);
+            */
+            feature.Id = GenerateUniqueId(gnisRecord);
 
             return feature;
         }

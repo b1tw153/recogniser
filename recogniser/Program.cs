@@ -65,6 +65,7 @@ namespace recogniser
         private static readonly string overpassUrlDefault = @"http://127.0.0.1/api/interpreter";
         private static readonly string mapRouletteOutputTypeDefault = "collaborative";
         private static readonly string privateDataPathDefault = @"conf/private_data.json";
+        private static readonly int threadsDefault = 8;
 
         private static bool _alwaysMatchGeometry = false;
         private static bool _skipMatches = false;
@@ -203,6 +204,9 @@ namespace recogniser
                 // path to the OsmChange output file (optional)
                 parsedArgs.TryGetValue("--osmChangeFile", out string? osmChangeOutputPath);
 
+                // type of MapRoulette output to generate
+                int threads = parsedArgs.TryGetValue("--threads", out argValue) ? int.Parse(argValue) : threadsDefault;
+
                 Verbose.WriteLine(Directory.GetCurrentDirectory());
 
                 // set up the output file writers
@@ -226,7 +230,7 @@ namespace recogniser
 
                 // process each GNIS record in parallel
                 // this proves to be a more robust threading model than breaking the processing down into smaller tasks
-                Parallel.ForEach(gnisFileReader, new ParallelOptions { MaxDegreeOfParallelism = 8 }, ( fileRecord, parallelLoopState, iteration ) =>
+                Parallel.ForEach(gnisFileReader, new ParallelOptions { MaxDegreeOfParallelism = threads }, ( fileRecord, parallelLoopState, iteration ) =>
                 {
                     gnisRecordTimer.Start(iteration);
 
@@ -462,7 +466,7 @@ namespace recogniser
 
         private static bool TryParseArgs(string[] args, Dictionary<string, string> parsedArgs)
         {
-            string[] possibleOptions = { "gnisFile", "outputFile", "mapRouletteFile", "mapRouletteType", "osmChangeFile", "privateData", "gnisClassData", "errata", "overpassUrl" };
+            string[] possibleOptions = { "gnisFile", "outputFile", "mapRouletteFile", "mapRouletteType", "osmChangeFile", "privateData", "gnisClassData", "errata", "overpassUrl", "threads" };
             string[] possibleSwitches = { "performance", "progress", "verbose", "archived", "skipMatches", "alwaysMatchGeometry" };
 
             try
@@ -524,6 +528,7 @@ Search for GNIS features in OSM and output MapRoulette tasks or OSC XML to updat
   --archived                process archived GNIS classes (excluded by default)
   --alwaysMatchGeometry     process geometry matches for every OSM feature (may produce false positives)
   --skipMatches             output results only for GNIS records that did not match OSM features
+  --threads N               number of parallel threads to use for processing (default is 8)
   --help, -h, /?            display this help and exit";
 
         private static void PrintHelp()
