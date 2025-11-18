@@ -1,7 +1,30 @@
-﻿using System.Text.Json;
+﻿using System.CommandLine;
+using System.Text.Json;
 
 namespace recogniser
 {
+    /// <summary>
+    /// Configuration class to hold all command line arguments
+    /// </summary>
+    public class CommandLineOptions
+    {
+        public string? GnisFile { get; set; }
+        public string? OutputFile { get; set; }
+        public string? MapRouletteFile { get; set; }
+        public string MapRouletteType { get; set; } = "collaborative";
+        public string? OsmChangeFile { get; set; }
+        public string? PrivateData { get; set; }
+        public string? GnisClassData { get; set; }
+        public string? Errata { get; set; }
+        public string? OverpassUrl { get; set; }
+        public bool Performance { get; set; }
+        public bool Progress { get; set; }
+        public bool Verbose { get; set; }
+        public bool Archived { get; set; }
+        public bool SkipMatches { get; set; }
+        public bool AlwaysMatchGeometry { get; set; }
+    }
+
     public class Program
     {
         public static readonly string userAgentBaseString = "recogniser-bot/0.1";
@@ -115,39 +138,177 @@ namespace recogniser
         /// Main body of the command-line app
         /// </summary>
         /// <param name="args">Command-line arguments</param>
-        static void Main(string[] args)
+        static async Task<int> Main(string[] args)
         {
-            Dictionary<string, string> parsedArgs = new();
+            var rootCommand = CreateRootCommand();
+            return await rootCommand.InvokeAsync(args);
+        }
 
-            if (!TryParseArgs(args, parsedArgs))
-                return;
+        /// <summary>
+        /// Creates and configures the root command with all options
+        /// </summary>
+        private static RootCommand CreateRootCommand()
+        {
+            var rootCommand = new RootCommand("Search for GNIS features in OSM and output MapRoulette tasks or OSC XML to update them.");
 
+            // Required options
+            var gnisFileOption = new Option<string>(
+                name: "--gnisFile",
+                description: "File containing GNIS records with pipe-separated fields (REQUIRED)")
+            { IsRequired = true };
+
+            // Output file options
+            var outputFileOption = new Option<string?>(
+                name: "--outputFile",
+                description: "Output TSV file containing search results");
+
+            var mapRouletteFileOption = new Option<string?>(
+                name: "--mapRouletteFile",
+                description: "Output GeoJson file containing MapRoulette challenge data");
+
+            var mapRouletteTypeOption = new Option<string>(
+                name: "--mapRouletteType",
+                getDefaultValue: () => mapRouletteOutputTypeDefault,
+                description: "Type of MapRoulette tasks (collaborative/tagfix/plain)");
+
+            var osmChangeFileOption = new Option<string?>(
+                name: "--osmChangeFile",
+                description: "Output OsmChange XML file containing all changes");
+
+            // Configuration file options with defaults
+            var privateDataOption = new Option<string?>(
+                name: "--privateData",
+                getDefaultValue: () => null,
+                description: $"JSON file containing private configuration data (DEFAULT: {privateDataPathDefault})");
+
+            var gnisClassDataOption = new Option<string?>(
+                name: "--gnisClassData",
+                getDefaultValue: () => null,
+                description: $"CSV file containing GNIS class data (DEFAULT: {gnisClassDataPathDefault})");
+
+            var errataOption = new Option<string?>(
+                name: "--errata",
+                getDefaultValue: () => null,
+                description: $"JSON file containing errata records (DEFAULT: {errataPathDefault})");
+
+            var overpassUrlOption = new Option<string?>(
+                name: "--overpassUrl",
+                getDefaultValue: () => null,
+                description: $"URL for the Overpass interpreter (DEFAULT: {overpassUrlDefault})");
+
+            // Boolean switches
+            var performanceOption = new Option<bool>(
+                name: "--performance",
+                description: "Write performance summary to stdout at the end");
+
+            var progressOption = new Option<bool>(
+                name: "--progress",
+                description: "Write periodic progress updates to stdout");
+
+            var verboseOption = new Option<bool>(
+                name: "--verbose",
+                description: "Write detailed progress data to stdout");
+
+            var archivedOption = new Option<bool>(
+                name: "--archived",
+                description: "Process archived GNIS classes (excluded by default)");
+
+            var alwaysMatchGeometryOption = new Option<bool>(
+                name: "--alwaysMatchGeometry",
+                description: "Process geometry matches for every OSM feature");
+
+            var skipMatchesOption = new Option<bool>(
+                name: "--skipMatches",
+                description: "Output results only for GNIS records that didn't match");
+
+            // Add all options to root command
+            rootCommand.AddOption(gnisFileOption);
+            rootCommand.AddOption(outputFileOption);
+            rootCommand.AddOption(mapRouletteFileOption);
+            rootCommand.AddOption(mapRouletteTypeOption);
+            rootCommand.AddOption(osmChangeFileOption);
+            rootCommand.AddOption(privateDataOption);
+            rootCommand.AddOption(gnisClassDataOption);
+            rootCommand.AddOption(errataOption);
+            rootCommand.AddOption(overpassUrlOption);
+            rootCommand.AddOption(performanceOption);
+            rootCommand.AddOption(progressOption);
+            rootCommand.AddOption(verboseOption);
+            rootCommand.AddOption(archivedOption);
+            rootCommand.AddOption(alwaysMatchGeometryOption);
+            rootCommand.AddOption(skipMatchesOption);
+
+            // Set the handler
+            rootCommand.SetHandler(
+                RunApplication,
+                gnisFileOption,
+                outputFileOption,
+                mapRouletteFileOption,
+                mapRouletteTypeOption,
+                osmChangeFileOption,
+                privateDataOption,
+                gnisClassDataOption,
+                errataOption,
+                overpassUrlOption,
+                performanceOption,
+                progressOption,
+                verboseOption,
+                archivedOption,
+                alwaysMatchGeometryOption,
+                skipMatchesOption);
+
+            return rootCommand;
+        }
+
+        /// <summary>
+        /// Main application logic
+        /// </summary>
+        private static void RunApplication(
+            string gnisFilePath,
+            string? tsvFilePath,
+            string? mapRouletteOutputPath,
+            string mapRouletteOutputType,
+            string? osmChangeOutputPath,
+            string? privateDataPath,
+            string? gnisClassDataPath,
+            string? errataPath,
+            string? overpassUrl,
+            bool performance,
+            bool progress,
+            bool verbose,
+            bool archived,
+            bool alwaysMatchGeometry,
+            bool skipMatches)
+        {
             try
             {
                 PerformanceTimer initializationTimer = new("Initialization");
                 initializationTimer.Start(0);
 
                 // initialize output writers that may go to the Console
-                if (parsedArgs.ContainsKey("--performance"))
+                if (performance)
                     _performance = Console.Out;
-                if (parsedArgs.ContainsKey("--progress"))
+                if (progress)
                     _progress = Console.Out;
-                if (parsedArgs.ContainsKey("--verbose"))
+                if (verbose)
                     _verbose = Console.Out;
 
                 // set the flag to always match geometry
-                if (parsedArgs.ContainsKey("--alwaysMatchGeometry"))
+                if (alwaysMatchGeometry)
                     _alwaysMatchGeometry = true;
 
                 // set the flag to skip matched GNIS records
-                if (parsedArgs.ContainsKey("--skipMatches"))
+                if (skipMatches)
                     _skipMatches = true;
 
                 // path to the directory containing executable file
                 string exeDirPath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? ".";
 
-                // path to the private data file
-                string privateDataPath = parsedArgs.TryGetValue("--privateData", out string? argValue) ? argValue : Path.Combine(exeDirPath, privateDataPathDefault);
+                // Apply defaults for configuration file paths
+                privateDataPath ??= Path.Combine(exeDirPath, privateDataPathDefault);
+                gnisClassDataPath ??= Path.Combine(exeDirPath, gnisClassDataPathDefault);
+                errataPath ??= Path.Combine(exeDirPath, errataPathDefault);
+                overpassUrl ??= overpassUrlDefault;
 
                 // read the private data file
                 _privateData = JsonSerializer.Deserialize<JPrivateData>(File.ReadAllText(privateDataPath)) ?? new JPrivateData();
@@ -156,15 +317,9 @@ namespace recogniser
                 if (String.IsNullOrEmpty(_privateData.UserAgent) && !String.IsNullOrEmpty(_privateData.OperatorEmail))
                     // note that Wikidata expects the user agent string to be "program-name/0.0 (user@emailhost)"
                     _privateData.UserAgent = $"{userAgentBaseString} ({_privateData.OperatorEmail})";
- 
-                // path to the GNIS glass attributes
-                string gnisClassDataPath = parsedArgs.TryGetValue("--gnisClassData", out argValue) ? argValue : Path.Combine(exeDirPath, gnisClassDataPathDefault);
 
                 // read the GNIS class attributes
                 GnisClassData gnisClassData = new(gnisClassDataPath);
-
-                // URL for the Overpass API endpoint
-                string overpassUrl = parsedArgs.TryGetValue("--overpassUrl", out argValue) ? argValue : overpassUrlDefault;
 
                 // configure the query builder
                 OverpassQueryBuilder overpassQueryBuilder = new(gnisClassData, overpassUrl);
@@ -175,33 +330,11 @@ namespace recogniser
                 // configure the gnis validator
                 _gnisValidator = new(gnisClassData);
 
-                // path to the errata file
-                string errataPath = parsedArgs.TryGetValue("--errata", out argValue) ? argValue : Path.Combine(exeDirPath, errataPathDefault);
-
                 // read the errata file
                 JErrata errataObject = JsonSerializer.Deserialize<JErrata>(File.ReadAllText(errataPath)) ?? new JErrata();
                 Dictionary<string, Erratum> errata = new();
                 foreach (Erratum erratum in errataObject.Errata)
                     errata.Add(erratum.Id, erratum);
-
-                // type of MapRoulette output to generate
-                string mapRouletteOutputType = parsedArgs.TryGetValue("--mapRouletteType", out argValue) ? argValue : mapRouletteOutputTypeDefault;
-
-                // path to the file containing GNIS records (required)
-                if (!parsedArgs.TryGetValue("--gnisFile", out string? gnisFilePath))
-                {
-                    PrintHelp();
-                    return;
-                }
-
-                // path to the output table file (optional)
-                parsedArgs.TryGetValue("--outputFile", out string? tsvFilePath);
-
-                // path to the MapRoulette output file (optional)
-                parsedArgs.TryGetValue("--mapRouletteFile", out string? mapRouletteOutputPath);
-
-                // path to the OsmChange output file (optional)
-                parsedArgs.TryGetValue("--osmChangeFile", out string? osmChangeOutputPath);
 
                 Verbose.WriteLine(Directory.GetCurrentDirectory());
 
@@ -253,7 +386,7 @@ namespace recogniser
                     // and skip all records flagged to be skipped in the errata
                     // and skip all records with 0,0 as primary coordinates
                     // and skip all records for census divisions because we don't need to map them
-                    if ((!gnisClassAttributes.Current && !parsedArgs.ContainsKey("--archived")) || erratum.Skip || gnisRecord.HasZeroPrimary() || censusDivision)
+                    if ((!gnisClassAttributes.Current && !archived) || erratum.Skip || gnisRecord.HasZeroPrimary() || censusDivision)
                     {
                         Progress.WriteLine("...");
 
@@ -458,77 +591,6 @@ namespace recogniser
             {
                 Console.Error.WriteLine(e.ToString());
             }
-        }
-
-        private static bool TryParseArgs(string[] args, Dictionary<string, string> parsedArgs)
-        {
-            string[] possibleOptions = { "gnisFile", "outputFile", "mapRouletteFile", "mapRouletteType", "osmChangeFile", "privateData", "gnisClassData", "errata", "overpassUrl" };
-            string[] possibleSwitches = { "performance", "progress", "verbose", "archived", "skipMatches", "alwaysMatchGeometry" };
-
-            try
-            {
-                for (int i = 0; i < args.Length; i++)
-                {
-                    if ("--help".Equals(args[i]) || "/?".Equals(args[i]) || "-h".Equals(args[i]))
-                    {
-                        PrintHelp();
-                        return false;
-                    }
-
-                    foreach (var poss in possibleOptions)
-                    {
-                        if ($"--{poss}".Equals(args[i]))
-                        {
-                            parsedArgs.Add(args[i], args[i+1]);
-                            i++;
-                        }
-                    }
-
-                    foreach (var poss in possibleSwitches)
-                    {
-                        if ($"--{poss}".Equals(args[i]))
-                        {
-                            parsedArgs.Add(args[i], "true");
-                        }
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                PrintHelp();
-                return false;
-            }
-
-            return true;
-        }
-
-        private static readonly string usage =
-@"Usage: recogniser [OPTION]...
-Search for GNIS features in OSM and output MapRoulette tasks or OSC XML to update them.
-
-  --gnisFile FILE           file containing GNIS records with pipe-separated fields (REQUIRED)
-  --outputFile FILE         output TSV file containing search results
-  --mapRouletteFile FILE    output GeoJson file containing MapRoulette challenge data
-  --mapRouletteType TYPE    type of MapRoulette tasks to create, values are:
-        collaborative       collaborative tasks containing OsmChange XML (DEFAULT)
-        tagfix              collaborative tasks containing Tag Fix data
-        plain               ordinary MapRoulette tasks without automated changes
-  --osmChangeFile FILE      output a single OsmChange XML file containing all changes
-  --privateData FILE        JSON file containing private configuration data (DEFAULT: conf/private_data.json)
-  --gnisClassData FILE      CSV file containing GNIS class data (DEFAULT: conf/gnis_class_data.csv)
-  --errata FILE             JSON file containing errata records (DEFAULT: conf/errata.json)
-  --overpassUrl URL         URL for the Overpass interpreter (DEFAULT: http://127.0.0.1/api/interpreter)
-  --performance             write a performance summary to stdout at the end of the run
-  --progress                write periodic progress updates to stdout
-  --verbose                 write huge amounts of progress data to stdout
-  --archived                process archived GNIS classes (excluded by default)
-  --alwaysMatchGeometry     process geometry matches for every OSM feature (may produce false positives)
-  --skipMatches             output results only for GNIS records that did not match OSM features
-  --help, -h, /?            display this help and exit";
-
-        private static void PrintHelp()
-        {
-            Console.WriteLine(usage);
         }
     }
 }
