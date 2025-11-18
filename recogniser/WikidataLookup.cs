@@ -6,7 +6,7 @@ namespace recogniser
 	public class WikidataLookup
 	{
         private static readonly ConcurrentDictionary<string, string> wikidataCache = new();
-        private static readonly string baseUrl = @"https://wikidata.org/w/rest.php/wikibase/v0";
+        private static readonly string baseUrl = @"https://www.wikidata.org/w/rest.php/wikibase/v1";
 
         public static string[] GetGnisIds(OsmFeature osmFeature)
         {
@@ -83,7 +83,7 @@ namespace recogniser
             catch (Exception e)
             {
                 // it's nice to know if we're getting errors from wikidata but it's not going to stop us
-                Console.Error.WriteLine(e.Message);
+                Console.Error.WriteLine($"Wikidata error: {e.Message}");
             }
 
             // unable to parse the response
