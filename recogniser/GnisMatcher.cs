@@ -995,24 +995,24 @@ namespace recogniser
 
                     try
                     {
-                        // todo: change this to request only the GNIS ID statement
+                        // Request only the GNIS ID statement (P590) for efficiency
                         // see https://doc.wikimedia.org/Wikibase/master/js/rest-api/
-                        string url = $"{baseUrl}/entities/items/{itemId}/statements";
+                        string url = $"{baseUrl}/entities/items/{itemId}/statements/P590";
                         HttpRequestMessage request = new(HttpMethod.Get, url);
                         request.Headers.Add("User-Agent", Program.PrivateData.UserAgent);
                         request.Headers.Add("Authorization", Program.PrivateData.WikidataAuthorization);
                         HttpResponseMessage response = Program.HttpClient.Send(request);
                         string? content = new StreamReader(response.Content.ReadAsStream()).ReadToEnd();
                         response.EnsureSuccessStatusCode();
-                        JsonNode? wikidataItem = JsonNode.Parse(content);
+                        JsonNode? wikidataGnisIdStatement = JsonNode.Parse(content);
 
-                        if (wikidataItem != null)
+                        if (wikidataGnisIdStatement != null)
                         {
                             List<string> ids = new();
                             bool match = false;
 
-                            JsonNode? wikidataGnisIdStatement = wikidataItem["P590"];
-                            if (wikidataGnisIdStatement != null)
+                            // When requesting a specific property, the response is directly an array of statements
+                            if (wikidataGnisIdStatement is JsonArray)
                             {
                                 foreach (JsonNode? wikidataGnisIdValue in wikidataGnisIdStatement.AsArray())
                                 {

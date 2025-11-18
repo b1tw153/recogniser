@@ -4,7 +4,7 @@ Automated matching between [GNIS](https://www.usgs.gov/us-board-on-geographic-na
 
 ## Building recoGNISer
 
-The recoGNISer project is built using Visual Studio 2022 with .NetCore and the GeoCoordinate package. It can be built for and run on any system that supports .Net 7.0.
+The recoGNISer project is built using Visual Studio 2022 with .NetCore and the GeoCoordinate package. It can be built for and run on any system that supports .Net 10.0.
 
 ## Using recoGNISer
 
@@ -140,5 +140,5 @@ Note that the substitute text MUST be in the same format as the source GNIS data
 ```
 .\powershell\NationalFile-Slicer.ps1 -States California -Counties Mono -gnisFile ~\Documents\GNIS\DomesticNames_National.txt > ~\Documents\GNIS\California_Mono.txt
 
-.\recogniser\bin\Release\net7.0\recogniser.exe --overpassUrl 'http://192.168.0.13/api/interpreter' --gnisFile ~\Documents\GNIS\California_Mono.txt --mapRouletteFile ~\Documents\GNIS\California_Mono.geojson --progress --performance
+.\recogniser\bin\Release\net10.0\recogniser.exe --overpassUrl 'http://192.168.0.13/api/interpreter' --gnisFile ~\Documents\GNIS\California_Mono.txt --mapRouletteFile ~\Documents\GNIS\California_Mono.geojson --progress --performance
 ```
