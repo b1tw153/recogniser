@@ -239,23 +239,25 @@ namespace recogniser
             rootCommand.AddOption(skipMatchesOption);
 
             // Set the handler
-            rootCommand.SetHandler(
-                RunApplication,
-                gnisFileOption,
-                outputFileOption,
-                mapRouletteFileOption,
-                mapRouletteTypeOption,
-                osmChangeFileOption,
-                privateDataOption,
-                gnisClassDataOption,
-                errataOption,
-                overpassUrlOption,
-                performanceOption,
-                progressOption,
-                verboseOption,
-                archivedOption,
-                alwaysMatchGeometryOption,
-                skipMatchesOption);
+            rootCommand.SetHandler((context) =>
+            {
+                RunApplication(
+                    context.ParseResult.GetValueForOption(gnisFileOption)!,
+                    context.ParseResult.GetValueForOption(outputFileOption),
+                    context.ParseResult.GetValueForOption(mapRouletteFileOption),
+                    context.ParseResult.GetValueForOption(mapRouletteTypeOption)!,
+                    context.ParseResult.GetValueForOption(osmChangeFileOption),
+                    context.ParseResult.GetValueForOption(privateDataOption),
+                    context.ParseResult.GetValueForOption(gnisClassDataOption),
+                    context.ParseResult.GetValueForOption(errataOption),
+                    context.ParseResult.GetValueForOption(overpassUrlOption),
+                    context.ParseResult.GetValueForOption(performanceOption),
+                    context.ParseResult.GetValueForOption(progressOption),
+                    context.ParseResult.GetValueForOption(verboseOption),
+                    context.ParseResult.GetValueForOption(archivedOption),
+                    context.ParseResult.GetValueForOption(alwaysMatchGeometryOption),
+                    context.ParseResult.GetValueForOption(skipMatchesOption));
+            });
 
             return rootCommand;
         }
