@@ -1,4 +1,4 @@
-﻿namespace recogniser
+﻿namespace Recogniser
 {
     internal class TagFixBuilder
     {
@@ -16,10 +16,10 @@
             TagFixOperation tagFix = new();
             TagFixIndependentOperation tagFixIndependentOperation = new()
             {
-                Id = $"{matchResult.osmFeature.GetOsmType()}/{matchResult.osmFeature.Id}"
+                Id = $"{matchResult.OsmFeature.GetOsmType()}/{matchResult.OsmFeature.Id}"
             };
 
-            tagFix.Data = new() { tagFixIndependentOperation };
+            tagFix.Data = [tagFixIndependentOperation];
 
             modified |= ModifyFeatureId(gnisRecord, matchResult, validationResult, tagFixIndependentOperation.Operations);
 
@@ -29,24 +29,28 @@
 
             if (modified)
             {
-                DeleteExtraGnisTags(matchResult.osmFeature, tagFixIndependentOperation.Operations);
+                DeleteExtraGnisTags(matchResult.OsmFeature, tagFixIndependentOperation.Operations);
 
-                return new List<TagFixOperation>() { tagFix };
+                return [tagFix];
             }
             else
+            {
                 return null;
+            }
         }
 
         private static void DeleteExtraGnisTags(OsmFeature osmFeature, List<TagFixDependentOperation> operations)
         {
-            List<string> tagsToDelete = new();
+            List<string> tagsToDelete = [];
 
             OsmTagCollection tags = osmFeature.GetTagCollection();
 
             foreach (OsmTag tag in tags)
             {
-                if (Program.extraGnisTags.Contains(tag.Key))
+                if (Program.ExtraGnisTags.Contains(tag.Key))
+                {
                     tagsToDelete.Add(tag.Key);
+                }
             }
 
             if (tagsToDelete.Count > 0)
@@ -68,13 +72,13 @@
                 case GnisTagValidation.OK:
                     return false;
                 case GnisTagValidation.FEATURE_CLASS_PRIMARY_TAG_MISSING:
-                    return AddPrimaryTag(gnisRecord, matchResult.osmFeature, operations);
+                    return AddPrimaryTag(gnisRecord, matchResult.OsmFeature, operations);
                 case GnisTagValidation.FEATURE_CLASS_SECONDARY_TAG_MISSING:
-                    return AddSecondaryTag(gnisRecord, matchResult.osmFeature, operations);
+                    return AddSecondaryTag(gnisRecord, matchResult.OsmFeature, operations);
                 case GnisTagValidation.FEATURE_CLASS_TAGS_MISSING:
                     bool modified = false;
-                    modified |= AddPrimaryTag(gnisRecord, matchResult.osmFeature, operations);
-                    modified |= AddSecondaryTag(gnisRecord, matchResult.osmFeature, operations);
+                    modified |= AddPrimaryTag(gnisRecord, matchResult.OsmFeature, operations);
+                    modified |= AddSecondaryTag(gnisRecord, matchResult.OsmFeature, operations);
                     return modified;
                 case GnisTagValidation.NOT_PROCESSED:
                     return false;
@@ -133,7 +137,7 @@
         private static bool ModifyName(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult, List<TagFixDependentOperation> operations)
         {
             TagFixDependentOperation operation;
-            OsmTagCollection tags = matchResult.osmFeature.GetTagCollection();
+            OsmTagCollection tags = matchResult.OsmFeature.GetTagCollection();
 
             switch (validationResult.nameValidation)
             {
@@ -143,7 +147,7 @@
                 case GnisNameValidation.FEATURE_NAME_MISSING:
 
                     // add the feature name
-                    matchResult.osmFeature.AddTag(new OsmTag("name", gnisRecord.FeatureName));
+                    matchResult.OsmFeature.AddTag(new OsmTag("name", gnisRecord.FeatureName));
                     operation = new()
                     {
                         Operation = "setTags",
@@ -168,7 +172,7 @@
                     if (!tags.ContainsKey("name"))
                     {
                         // move the name to the "name" key
-                        string name = matchResult.osmFeature.GetTagCollection()[matchResult.nameKey] ?? string.Empty;
+                        string name = matchResult.OsmFeature.GetTagCollection()[matchResult.NameKey] ?? string.Empty;
 
                         // delete the deprecated key
                         operation = new()
@@ -176,14 +180,14 @@
                             Operation = "unsetTags",
                             Data = new string[]
                             {
-                                matchResult.nameKey
+                                matchResult.NameKey
                             }
                         };
 
                         operations.Add(operation);
 
                         // add the feature name
-                        matchResult.osmFeature.AddTag(new OsmTag("name", gnisRecord.FeatureName));
+                        matchResult.OsmFeature.AddTag(new OsmTag("name", gnisRecord.FeatureName));
                         operation = new()
                         {
                             Operation = "setTags",
@@ -209,7 +213,7 @@
         private static bool ModifyFeatureId(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult, List<TagFixDependentOperation> operations)
         {
             TagFixDependentOperation operation;
-            OsmTagCollection tags = matchResult.osmFeature.GetTagCollection();
+            OsmTagCollection tags = matchResult.OsmFeature.GetTagCollection();
             string[] oldValues;
             long[] newValues;
             string newValue;
@@ -261,7 +265,7 @@
                 case GnisFeatureIdValidation.FEATURE_ID_MULTIPLE_VALUES_EXTRANEOUS_CHARACTERS:
 
                     // build a clean tag value
-                    string? multiValue = matchResult.osmFeature.GetTagCollection()["gnis:feature_id"];
+                    string? multiValue = matchResult.OsmFeature.GetTagCollection()["gnis:feature_id"];
                     oldValues = multiValue != null ? multiValue.Split(";") : Array.Empty<string>();
                     newValues = new long[oldValues.Length];
 
@@ -308,7 +312,7 @@
                         Operation = "unsetTags",
                         Data = new string[]
                         {
-                            matchResult.featureIdKey
+                            matchResult.FeatureIdKey
                         }
                     };
 
@@ -320,7 +324,7 @@
                 case GnisFeatureIdValidation.FEATURE_ID_WRONG_KEY_MULTIPLE_VALUES_EXTRANEOUS_CHARACTERS:
 
                     // collect the old values
-                    oldValues = tags[matchResult.featureIdKey]?.Split(";") ?? Array.Empty<string>();
+                    oldValues = tags[matchResult.FeatureIdKey]?.Split(";") ?? Array.Empty<string>();
 
                     // build a clean value
                     newValues = new long[oldValues.Length];
@@ -339,7 +343,7 @@
                         Operation = "unsetTags",
                         Data = new string[]
                         {
-                            matchResult.featureIdKey
+                            matchResult.FeatureIdKey
                         }
                     };
 

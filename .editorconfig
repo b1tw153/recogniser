@@ -1,0 +1,22 @@
+root = true
+
+[*.cs]
+# Disable SA1000: The keyword 'new' should be followed by a space
+dotnet_diagnostic.SA1000.severity = none
+
+# Disable SA1101: Prefix local calls with this
+dotnet_diagnostic.SA1101.severity = none
+
+# Disable SA1600: Elements should be documented - temporarily to reduce noise
+dotnet_diagnostic.SA1600.severity = none
+
+# Disable SA1601: Partial elements should be documented - temporarily to reduce noise
+dotnet_diagnostic.SA1601.severity = none
+
+# Disable SA1602: Enumeration items should be documented - temporarily to reduce noise
+dotnet_diagnostic.SA1602.severity = none
+
+# JSON/XML serialization files with multiple related types
+[{JErrata.cs,JMapRouletteGeoJson.cs,JPrivateData.cs,XOsmChange.cs,XOsmData.cs}]
+# Disable SA1402: File may only contain a single type
+dotnet_diagnostic.SA1402.severity = none

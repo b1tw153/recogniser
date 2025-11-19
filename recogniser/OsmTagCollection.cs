@@ -1,14 +1,14 @@
 ﻿using System.Collections;
 
-namespace recogniser
+namespace Recogniser
 {
-    public class OsmTagCollection : ICollection<OsmTag>
+    internal class OsmTagCollection : ICollection<OsmTag>
     {
-        List<OsmTag> _tags;
+        private readonly List<OsmTag> _tags;
 
         public OsmTagCollection(List<OsmTag>? tags)
         {
-            _tags = new List<OsmTag>();
+            _tags = [];
             if (tags != null)
             {
                 _tags.AddRange(tags);
@@ -17,14 +17,14 @@ namespace recogniser
 
         public bool ContainsKey(string key)
         {
-            return _tags.Exists(t => key.Equals(t.Key));
+            return _tags.Exists(t => key.Equals(t.Key, StringComparison.Ordinal));
         }
 
         public string? this[string key]
         {
             get
             {
-                OsmTag? tag = _tags.Find(t => key.Equals(t.Key));
+                OsmTag? tag = _tags.Find(t => key.Equals(t.Key, StringComparison.Ordinal));
                 return tag != null ? tag.Value : null;
             }
         }

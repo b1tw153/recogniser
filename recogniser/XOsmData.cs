@@ -3,26 +3,26 @@ using GeoCoordinatePortable;
 using System.ComponentModel;
 using System.Xml.Serialization;
 
-namespace recogniser
+namespace Recogniser
 {
     /// <remarks/>
     [Serializable()]
     [DesignerCategory("code")]
     [XmlType(AnonymousType = true)]
     [XmlRoot(Namespace = "", ElementName = "osm", IsNullable = false)]
-    public class XOsmData
+    internal class XOsmData
     {
         [NonSerialized]
         private List<OsmFeature>? _features = null;
 
         [NonSerialized]
-        private readonly Dictionary<long, OsmNode> _nodeCollection = new();
+        private readonly Dictionary<long, OsmNode> _nodeCollection = [];
 
         [NonSerialized]
-        private readonly Dictionary<long, OsmWay> _wayCollection = new();
+        private readonly Dictionary<long, OsmWay> _wayCollection = [];
 
         [NonSerialized]
-        private readonly Dictionary<long, OsmRelation> _relationCollection = new();
+        private readonly Dictionary<long, OsmRelation> _relationCollection = [];
 
         /// <remarks/>
         [XmlAttribute("version")]
@@ -42,24 +42,21 @@ namespace recogniser
 
         /// <remarks/>
         [XmlElement("node")]
-        public List<OsmNode> Nodes { get; set; } = new();
+        public List<OsmNode> Nodes { get; set; } = [];
 
         /// <remarks/>
         [XmlElement("way")]
-        public List<OsmWay> Ways { get; set; } = new();
+        public List<OsmWay> Ways { get; set; } = [];
 
         /// <remarks/>
         [XmlElement("relation")]
-        public List<OsmRelation> Relations { get; set; } = new();
+        public List<OsmRelation> Relations { get; set; } = [];
 
         public List<OsmFeature> GetFeatures()
         {
             if (_features == null)
             {
-                _features = new();
-                _features.AddRange(Nodes);
-                _features.AddRange(Ways);
-                _features.AddRange(Relations);
+                _features = [.. Nodes, .. Ways, .. Relations];
             }
             return _features;
         }
@@ -85,7 +82,7 @@ namespace recogniser
             }
         }
 
-        
+
         public Dictionary<long, OsmNode> GetNodeCollection()
         {
             return _nodeCollection;
@@ -104,9 +101,14 @@ namespace recogniser
         public static XOsmData? Merge(XOsmData? firstOsmDataSet, XOsmData? secondOsmDataSet)
         {
             if (firstOsmDataSet == null)
+            {
                 return secondOsmDataSet;
+            }
+
             if (secondOsmDataSet == null)
+            {
                 return null;
+            }
 
             firstOsmDataSet._features = null;
 
@@ -145,7 +147,7 @@ namespace recogniser
     [Serializable()]
     [DesignerCategory("code")]
     [XmlType(AnonymousType = true)]
-    public class OsmMeta
+    internal class OsmMeta
     {
         /// <remarks/>
         [XmlAttribute("osm_base")]
@@ -156,7 +158,7 @@ namespace recogniser
     [Serializable()]
     [DesignerCategory("code")]
     [XmlType(AnonymousType = true)]
-    public class OsmTag
+    internal class OsmTag
     {
         /// <remarks/>
         [XmlAttribute("k")]
@@ -178,7 +180,10 @@ namespace recogniser
         {
             string[] parts = Key.Split('=');
             if (parts.Length != 2)
-                throw new Exception($"Malformed key/value string: {keyValue}");
+            {
+                throw new FormatException($"Malformed key/value string: {keyValue}");
+            }
+
             Key = parts[0];
             Value = parts[1];
         }
@@ -193,7 +198,7 @@ namespace recogniser
     [Serializable()]
     [DesignerCategory("code")]
     [XmlType(AnonymousType = true)]
-    public class OsmBounds
+    internal class OsmBounds
     {
         /// <remarks/>
         [XmlAttribute("minlat")]
@@ -216,16 +221,16 @@ namespace recogniser
     [Serializable()]
     [DesignerCategory("code")]
     [XmlType(AnonymousType = true)]
-    public class OsmNode : OsmFeature
+    internal class OsmNode : OsmFeature
     {
         private static long _temporaryId = -1;
 
-        private XOsmData? _parent = null;
+        private XOsmData? _parent;
 
         /*
         /// <remarks/>
         [XmlElement("tag")]
-        public List<OsmTag> Tags { get; set; } = new();
+        public List<OsmTag> Tags { get; set; } = new ();
 
         /// <remarks/>
         [XmlAttribute("id")]
@@ -278,14 +283,14 @@ namespace recogniser
             Lon = double.Parse(lon);
         }
         */
-        
+
         public OsmNode(GeoCoordinate coordinate)
         {
             Id = Interlocked.Decrement(ref _temporaryId);
             Lat = coordinate.Latitude;
             Lon = coordinate.Longitude;
         }
-        
+
         public override FeatureType GetOsmType() => FeatureType.node;
 
         public GeoCoordinate GetCoordinate() => new(Lat, Lon);
@@ -316,13 +321,16 @@ namespace recogniser
         public override void SetParent(XOsmData parent)
         {
             _parent = parent;
-            _parent.GetNodeCollection().TryAdd(Id,this);
+            _parent.GetNodeCollection().TryAdd(Id, this);
         }
 
         public override XOsmData GetParent()
         {
             if (_parent == null)
-                throw new Exception("Parent reference must not be null.");
+            {
+                throw new InvalidOperationException("Parent reference must not be null.");
+            }
+
             return _parent;
         }
     }
@@ -331,11 +339,11 @@ namespace recogniser
     [Serializable()]
     [DesignerCategory("code")]
     [XmlType(AnonymousType = true)]
-    public class OsmWay : OsmFeature
+    internal class OsmWay : OsmFeature
     {
         private static long _temporaryId = -1;
 
-        private XOsmData? _parent = null;
+        private XOsmData? _parent;
 
         /// <remarks/>
         //[XmlElement("bounds")]
@@ -343,12 +351,12 @@ namespace recogniser
 
         /// <remarks/>
         [XmlElement("nd")]
-        public List<OsmWayNode> Nodes { get; set; } = new();
+        public List<OsmWayNode> Nodes { get; set; } = [];
 
         /*
         /// <remarks/>
         [XmlElement("tag")]
-        public List<OsmTag> Tags { get; set; } = new();
+        public List<OsmTag> Tags { get; set; } = new ();
 
         /// <remarks/>
         [XmlAttribute("id")]
@@ -389,7 +397,10 @@ namespace recogniser
         public override XOsmData GetParent()
         {
             if (_parent == null)
-                throw new Exception("Parent must not be null.");
+            {
+                throw new InvalidOperationException("Parent must not be null.");
+            }
+
             return _parent;
         }
 
@@ -398,9 +409,15 @@ namespace recogniser
         public override OsmLinearExtent? GetLinearExtent()
         {
             if (_parent == null)
-                throw new Exception("Parent data set reference must not be null.");
+            {
+                throw new InvalidOperationException("Parent data set reference must not be null.");
+            }
+
             if (Nodes.Count == 0)
+            {
                 return null;
+            }
+
             OsmNode first = _parent.GetNodeCollection()[Nodes[0].Ref];
             OsmNode last = _parent.GetNodeCollection()[Nodes[^1].Ref];
             return new OsmLinearExtent(first.Lat, first.Lon, last.Lat, last.Lon);
@@ -409,12 +426,16 @@ namespace recogniser
         public override OsmFeature? AddStartNode(OsmNode startNode)
         {
             if (_parent == null)
-                throw new Exception("Parent data set reference must not be null.");
+            {
+                throw new InvalidOperationException("Parent data set reference must not be null.");
+            }
 
             // this node must already be part a data set
             // if not, the caller messed up
             if (startNode.GetParent().GetNodeCollection()[startNode.Id] == null)
-                throw new Exception("Node is not part of an OSM data set.");
+            {
+                throw new InvalidOperationException("Node is not part of an OSM data set.");
+            }
 
             // add a new node to this way that refers to the start node
             OsmWayNode newNode = new() { Ref = startNode.Id };
@@ -426,12 +447,16 @@ namespace recogniser
         public override OsmFeature? AddEndNode(OsmNode endNode)
         {
             if (_parent == null)
-                throw new Exception("Parent data set reference must not be null.");
+            {
+                throw new InvalidOperationException("Parent data set reference must not be null.");
+            }
 
             // this node must already be part a data set
             // if not, the caller messed up
             if (endNode.GetParent().GetNodeCollection()[endNode.Id] == null)
-                throw new Exception("Node is not part of an OSM data set.");
+            {
+                throw new InvalidOperationException("Node is not part of an OSM data set.");
+            }
 
             // add a new node to this way that refers to the start node
             OsmWayNode newNode = new() { Ref = endNode.Id };
@@ -443,7 +468,7 @@ namespace recogniser
         public override List<OsmFeature>? Reverse()
         {
             Nodes.Reverse();
-            return new() { this };
+            return [this];
         }
 
         public OsmNode? GetNode(OsmWayNode wayNode)
@@ -456,7 +481,7 @@ namespace recogniser
     [Serializable()]
     [DesignerCategory("code")]
     [XmlType(AnonymousType = true)]
-    public class OsmWayNode
+    internal class OsmWayNode
     {
         /// <remarks/>
         [XmlAttribute("ref")]
@@ -468,24 +493,24 @@ namespace recogniser
     [DesignerCategory("code")]
     [XmlType(AnonymousType = true)]
     [XmlRoot(Namespace = "", ElementName = "relation", IsNullable = false)]
-    public class OsmRelation : OsmFeature
+    internal class OsmRelation : OsmFeature
     {
         private static long _temporaryId = -1;
-        private XOsmData? _parent = null;
+        private XOsmData? _parent;
 
-        private List<OsmRelationMember>? _connectedMembers = null;
+        private List<OsmRelationMember>? _connectedMembers;
 
         /// <remarks/>
         //public OsmBounds Bounds { get; set; }
 
         /// <remarks/>
         [XmlElement("member")]
-        public List<OsmRelationMember> Members { get; set; } = new();
+        public List<OsmRelationMember> Members { get; set; } = [];
 
         /*
         /// <remarks/>
         [XmlElement("tag")]
-        public List<OsmTag> Tags { get; set; } = new();
+        public List<OsmTag> Tags { get; set; } = new ();
 
         /// <remarks/>
         [XmlAttribute("id")]
@@ -531,7 +556,10 @@ namespace recogniser
         public override XOsmData GetParent()
         {
             if (_parent == null)
-                throw new Exception("Parent must not be null");
+            {
+                throw new InvalidOperationException("Parent must not be null");
+            }
+
             return _parent;
         }
 
@@ -542,7 +570,10 @@ namespace recogniser
         public override OsmFeature? AddStartNode(OsmNode startNode)
         {
             if (_parent == null)
-                throw new Exception("Parent data set reference must not be null.");
+            {
+                throw new InvalidOperationException("Parent data set reference must not be null.");
+            }
+
             if (_connectedMembers != null)
             {
                 OsmFeature? firstWay = _connectedMembers.First().GetOsmFeature();
@@ -554,7 +585,10 @@ namespace recogniser
         public override OsmFeature? AddEndNode(OsmNode endNode)
         {
             if (_parent == null)
-                throw new Exception("Parent data set reference must not be null.");
+            {
+                throw new InvalidOperationException("Parent data set reference must not be null.");
+            }
+
             if (_connectedMembers != null)
             {
                 OsmWay lastWay = _parent.GetWayCollection()[_connectedMembers.Last().Ref];
@@ -566,13 +600,15 @@ namespace recogniser
         public override List<OsmFeature>? Reverse()
         {
             if (_parent == null)
-                throw new Exception("Parent data set reference must not be null.");
+            {
+                throw new InvalidOperationException("Parent data set reference must not be null.");
+            }
 
-            List<OsmFeature> modifiedOsmFeatures = new();
+            List<OsmFeature> modifiedOsmFeatures = [];
 
             foreach (OsmRelationMember member in Members)
             {
-                if ("way".Equals(member.Type))
+                if ("way".Equals(member.Type, StringComparison.Ordinal))
                 {
                     OsmWay memberWay = _parent.GetWayCollection()[member.Ref];
                     memberWay.Nodes.Reverse();
@@ -593,7 +629,9 @@ namespace recogniser
         {
             // if there are no members
             if (Members.Count == 0)
+            {
                 return null;
+            }
 
             /*
             // if there are too many members, don't bother
@@ -605,14 +643,14 @@ namespace recogniser
             */
 
             // start with a list of all the (presumably) unordered members
-            List<OsmRelationMember> disjointMembers = new();
-            disjointMembers.AddRange(Members);
+            List<OsmRelationMember> disjointMembers = [.. Members];
 
             // build a list of ordered members where the end of one member matches the start of the next member
-            List<OsmRelationMember> connectedMembers = new();
-
-            // start the ordered list with the first member
-            connectedMembers.Add(Members[0]);
+            List<OsmRelationMember> connectedMembers =
+            [
+                // start the ordered list with the first member
+                Members[0],
+            ];
             disjointMembers.Remove(Members[0]);
 
             // track the full extent of the list of ordered members
@@ -629,7 +667,7 @@ namespace recogniser
                 foreach (OsmRelationMember member in disjointMembers)
                 {
                     // if this is a side stream in a waterway relation
-                    if ("side_stream".Equals(member.Role))
+                    if ("side_stream".Equals(member.Role, StringComparison.Ordinal))
                     {
                         // it isn't part of the linear extent
                         disjointMembers.Remove(member);
@@ -641,7 +679,9 @@ namespace recogniser
 
                     // if the member has no nodes (which is unlikely)
                     if (memberExtent == null)
+                    {
                         continue;
+                    }
 
                     // if the first member didn't have any nodes (also unlikely)
                     if (connectedLinearExtent == null)
@@ -709,27 +749,42 @@ namespace recogniser
                 return connectedLinearExtent;
             }
             else
+            {
                 return null;
+            }
         }
 
         internal OsmFeature? GetMember(OsmRelationMember member)
         {
             if (_parent == null)
-                throw new Exception("Parent data set reference must not be null.");
-            if ("node".Equals(member.Type) && _parent.GetNodeCollection().TryGetValue(member.Ref, out OsmNode? node))
+            {
+                throw new InvalidOperationException("Parent data set reference must not be null.");
+            }
+
+            if ("node".Equals(member.Type, StringComparison.Ordinal) && _parent.GetNodeCollection().TryGetValue(member.Ref, out OsmNode? node))
+            {
                 return node;
-            else if ("way".Equals(member.Type) && _parent.GetWayCollection().TryGetValue(member.Ref, out OsmWay? way))
+            }
+            else if ("way".Equals(member.Type, StringComparison.Ordinal) && _parent.GetWayCollection().TryGetValue(member.Ref, out OsmWay? way))
+            {
                 return way;
-            else if ("relation".Equals(member.Type) && _parent.GetRelationCollection().TryGetValue(member.Ref, out OsmRelation? relation))
+            }
+            else if ("relation".Equals(member.Type, StringComparison.Ordinal) && _parent.GetRelationCollection().TryGetValue(member.Ref, out OsmRelation? relation))
+            {
                 return relation;
+            }
             else
+            {
                 return null;
+            }
         }
 
         internal void AddMember(OsmFeature osmFeature)
         {
             if (_parent == null)
-                throw new Exception("Parent data set reference must not be null.");
+            {
+                throw new InvalidOperationException("Parent data set reference must not be null.");
+            }
 
             /*
             // this member must already be part of the same data set as the relation
@@ -751,7 +806,9 @@ namespace recogniser
 
             // this member must be a parent of an OSM data set
             if (osmFeature.GetParent() == null)
-                throw new Exception("Member must be part of an OSM data set.");
+            {
+                throw new InvalidOperationException("Member must be part of an OSM data set.");
+            }
 
             OsmRelationMember relationMember = new()
             {
@@ -768,9 +825,9 @@ namespace recogniser
     [Serializable()]
     [DesignerCategory("code")]
     [XmlType(AnonymousType = true)]
-    public class OsmRelationMember
+    internal class OsmRelationMember
     {
-        private XOsmData? _parent = null;
+        private XOsmData? _parent;
 
         /// <remarks/>
         [XmlAttribute("type")]
@@ -791,23 +848,38 @@ namespace recogniser
 
         public OsmLinearExtent? GetLinearExtent()
         {
-            if ("node".Equals(Type))
+            if ("node".Equals(Type, StringComparison.Ordinal))
+            {
                 return null;
+            }
 
             if (_parent?.GetWayCollection().TryGetValue(Ref, out OsmWay? way) ?? false)
+            {
                 return way.GetLinearExtent();
+            }
             else
+            {
                 return null;
+            }
         }
 
         internal OsmFeature? GetOsmFeature()
         {
-            if ("node".Equals(Type))
+            if ("node".Equals(Type, StringComparison.Ordinal))
+            {
                 return _parent?.GetNodeCollection()[Ref];
-            if ("way".Equals(Type))
+            }
+
+            if ("way".Equals(Type, StringComparison.Ordinal))
+            {
                 return _parent?.GetWayCollection()[Ref];
-            if ("relation".Equals(Type))
+            }
+
+            if ("relation".Equals(Type, StringComparison.Ordinal))
+            {
                 return _parent?.GetRelationCollection()[Ref];
+            }
+
             return null;
         }
     }

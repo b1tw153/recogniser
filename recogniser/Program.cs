@@ -1,36 +1,19 @@
-﻿using System.CommandLine;
-using System.Text.Json;
+﻿// <copyright file="Program.cs" company="recogniser project contributors">
+// Copyright (c) 2025 recogniser project contributors.
+// Licensed under the AGPL-3.0-or-later license. See LICENSE file in the project root for full license information.
+// </copyright>
 
-namespace recogniser
+namespace Recogniser
 {
-    /// <summary>
-    /// Configuration class to hold all command line arguments
-    /// </summary>
-    public class CommandLineOptions
-    {
-        public string? GnisFile { get; set; }
-        public string? OutputFile { get; set; }
-        public string? MapRouletteFile { get; set; }
-        public string MapRouletteType { get; set; } = "collaborative";
-        public string? OsmChangeFile { get; set; }
-        public string? PrivateData { get; set; }
-        public string? GnisClassData { get; set; }
-        public string? Errata { get; set; }
-        public string? OverpassUrl { get; set; }
-        public bool Performance { get; set; }
-        public bool Progress { get; set; }
-        public bool Verbose { get; set; }
-        public bool Archived { get; set; }
-        public bool SkipMatches { get; set; }
-        public bool AlwaysMatchGeometry { get; set; }
-    }
+    using System.CommandLine;
+    using System.Text.Json;
 
-    public class Program
+    internal class Program
     {
-        public static readonly string userAgentBaseString = "recogniser-bot/0.1";
+        public const string UserAgentBaseString = "recogniser-bot/0.1";
 
-        public static readonly HashSet<string> extraGnisTags = new()
-        {
+        public static readonly HashSet<string> ExtraGnisTags =
+        [
             "gnis:ftype",
             "gnis:created",
             "gnis:county_id",
@@ -73,79 +56,87 @@ namespace recogniser
             "tiger:PLACEFP",
             "tiger:PLCIDFP",
             "tiger:STATEFP"
-        };
+        ];
 
-        private static TextWriter _verbose = TextWriter.Synchronized(new StreamWriter(Stream.Null));
-        private static TextWriter _progress = TextWriter.Synchronized(new StreamWriter(Stream.Null));
-        private static TextWriter _performance = TextWriter.Synchronized(new StreamWriter(Stream.Null));
+        private const string GnisClassDataPathDefault = @"conf/gnis_class_data.csv";
+        private const string ErrataPathDefault = @"conf/errata.json";
+        private const string OverpassUrlDefault = @"http://127.0.0.1/api/interpreter";
+        private const string MapRouletteOutputTypeDefault = "collaborative";
+        private const string PrivateDataPathDefault = @"conf/private_data.json";
 
-        public static TextWriter Verbose { get { return _verbose; } }
-        public static TextWriter Progress { get { return _progress; } }
-        public static TextWriter Performance { get { return _performance; } }
+        private static GnisMatcher? gnisMatcher;
+        private static JPrivateData? privateData;
+        private static GnisValidator? gnisValidator;
 
-        private static readonly string gnisClassDataPathDefault = @"conf/gnis_class_data.csv";
-        private static readonly string errataPathDefault = @"conf/errata.json";
-        private static readonly string overpassUrlDefault = @"http://127.0.0.1/api/interpreter";
-        private static readonly string mapRouletteOutputTypeDefault = "collaborative";
-        private static readonly string privateDataPathDefault = @"conf/private_data.json";
+        public static TextWriter Verbose { get; private set; } = TextWriter.Synchronized(new StreamWriter(Stream.Null));
 
-        private static bool _alwaysMatchGeometry = false;
-        private static bool _skipMatches = false;
+        public static TextWriter Progress { get; private set; } = TextWriter.Synchronized(new StreamWriter(Stream.Null));
 
-        public static bool AlwaysMatchGeometry { get { return _alwaysMatchGeometry; } }
+        public static TextWriter Performance { get; private set; } = TextWriter.Synchronized(new StreamWriter(Stream.Null));
 
-        private static GnisMatcher? _gnisMatcher;
+        public static bool AlwaysMatchGeometry { get; private set; }
+
+        public static bool SkipMatches { get; private set; }
 
         public static GnisMatcher GnisMatcher
         {
             get
             {
-                if (_gnisMatcher == null)
-                    throw new Exception("GnisMatcher is not initialized");
-                return _gnisMatcher;
-            }
-        }
+                if (gnisMatcher == null)
+                {
+                    throw new InvalidOperationException("GnisMatcher is not initialized");
+                }
 
-        private static JPrivateData? _privateData;
+                return gnisMatcher;
+            }
+
+            private set => gnisMatcher = value;
+        }
 
         public static JPrivateData PrivateData
         {
             get
             {
-                if (_privateData == null)
-                    throw new Exception("PrivateData is not initialized");
-                return _privateData;
-            }
-        }
+                if (privateData == null)
+                {
+                    throw new InvalidOperationException("PrivateData is not initialized");
+                }
 
-        private static GnisValidator? _gnisValidator;
+                return privateData;
+            }
+
+            private set => privateData = value;
+        }
 
         public static GnisValidator GnisValidator
         {
             get
             {
-                if (_gnisValidator == null)
-                    throw new Exception("GnisValidator is not initialized");
-                return _gnisValidator;
+                if (gnisValidator == null)
+                {
+                    throw new InvalidOperationException("GnisValidator is not initialized");
+                }
+
+                return gnisValidator;
             }
+
+            private set => gnisValidator = value;
         }
 
-        private readonly static HttpClient _httpClient = new();
-
-        public static HttpClient HttpClient { get { return _httpClient; } }
+        public static HttpClient HttpClient { get; } = new();
 
         /// <summary>
-        /// Main body of the command-line app
+        /// Main body of the command-line app.
         /// </summary>
-        /// <param name="args">Command-line arguments</param>
-        static async Task<int> Main(string[] args)
+        /// <param name="args">Command-line arguments.</param>
+        private static async Task<int> Main(string[] args)
         {
             var rootCommand = CreateRootCommand();
-            return await rootCommand.InvokeAsync(args);
+            return await rootCommand.InvokeAsync(args).ConfigureAwait(false);
         }
 
         /// <summary>
-        /// Creates and configures the root command with all options
+        /// Creates and configures the root command with all options.
         /// </summary>
         private static RootCommand CreateRootCommand()
         {
@@ -168,7 +159,7 @@ namespace recogniser
 
             var mapRouletteTypeOption = new Option<string>(
                 name: "--mapRouletteType",
-                getDefaultValue: () => mapRouletteOutputTypeDefault,
+                getDefaultValue: () => MapRouletteOutputTypeDefault,
                 description: "Type of MapRoulette tasks (collaborative/tagfix/plain)");
 
             var osmChangeFileOption = new Option<string?>(
@@ -179,22 +170,22 @@ namespace recogniser
             var privateDataOption = new Option<string?>(
                 name: "--privateData",
                 getDefaultValue: () => null,
-                description: $"JSON file containing private configuration data (DEFAULT: {privateDataPathDefault})");
+                description: $"JSON file containing private configuration data (DEFAULT: {PrivateDataPathDefault})");
 
             var gnisClassDataOption = new Option<string?>(
                 name: "--gnisClassData",
                 getDefaultValue: () => null,
-                description: $"CSV file containing GNIS class data (DEFAULT: {gnisClassDataPathDefault})");
+                description: $"CSV file containing GNIS class data (DEFAULT: {GnisClassDataPathDefault})");
 
             var errataOption = new Option<string?>(
                 name: "--errata",
                 getDefaultValue: () => null,
-                description: $"JSON file containing errata records (DEFAULT: {errataPathDefault})");
+                description: $"JSON file containing errata records (DEFAULT: {ErrataPathDefault})");
 
             var overpassUrlOption = new Option<string?>(
                 name: "--overpassUrl",
                 getDefaultValue: () => null,
-                description: $"URL for the Overpass interpreter (DEFAULT: {overpassUrlDefault})");
+                description: $"URL for the Overpass interpreter (DEFAULT: {OverpassUrlDefault})");
 
             // Boolean switches
             var performanceOption = new Option<bool>(
@@ -242,10 +233,10 @@ namespace recogniser
             rootCommand.SetHandler((context) =>
             {
                 RunApplication(
-                    context.ParseResult.GetValueForOption(gnisFileOption)!,
+                    context.ParseResult.GetValueForOption(gnisFileOption) !,
                     context.ParseResult.GetValueForOption(outputFileOption),
                     context.ParseResult.GetValueForOption(mapRouletteFileOption),
-                    context.ParseResult.GetValueForOption(mapRouletteTypeOption)!,
+                    context.ParseResult.GetValueForOption(mapRouletteTypeOption) !,
                     context.ParseResult.GetValueForOption(osmChangeFileOption),
                     context.ParseResult.GetValueForOption(privateDataOption),
                     context.ParseResult.GetValueForOption(gnisClassDataOption),
@@ -263,7 +254,7 @@ namespace recogniser
         }
 
         /// <summary>
-        /// Main application logic
+        /// Main application logic.
         /// </summary>
         private static void RunApplication(
             string gnisFilePath,
@@ -282,317 +273,332 @@ namespace recogniser
             bool alwaysMatchGeometry,
             bool skipMatches)
         {
-            try
+            PerformanceTimer initializationTimer = new("Initialization");
+            initializationTimer.Start(0);
+
+            // initialize output writers that may go to the Console
+            if (performance)
             {
-                PerformanceTimer initializationTimer = new("Initialization");
-                initializationTimer.Start(0);
+                Performance = Console.Out;
+            }
 
-                // initialize output writers that may go to the Console
-                if (performance)
-                    _performance = Console.Out;
-                if (progress)
-                    _progress = Console.Out;
-                if (verbose)
-                    _verbose = Console.Out;
+            if (progress)
+            {
+                Progress = Console.Out;
+            }
 
-                // set the flag to always match geometry
-                if (alwaysMatchGeometry)
-                    _alwaysMatchGeometry = true;
+            if (verbose)
+            {
+                Verbose = Console.Out;
+            }
 
-                // set the flag to skip matched GNIS records
-                if (skipMatches)
-                    _skipMatches = true;
+            // set the flag to always match geometry
+            if (alwaysMatchGeometry)
+            {
+                AlwaysMatchGeometry = true;
+            }
 
-                // path to the directory containing executable file
-                string exeDirPath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? ".";
+            // set the flag to skip matched GNIS records
+            if (skipMatches)
+            {
+                SkipMatches = true;
+            }
 
-                // Apply defaults for configuration file paths
-                privateDataPath ??= Path.Combine(exeDirPath, privateDataPathDefault);
-                gnisClassDataPath ??= Path.Combine(exeDirPath, gnisClassDataPathDefault);
-                errataPath ??= Path.Combine(exeDirPath, errataPathDefault);
-                overpassUrl ??= overpassUrlDefault;
+            // path to the directory containing executable file
+            string exeDirPath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? ".";
 
-                // read the private data file
-                _privateData = JsonSerializer.Deserialize<JPrivateData>(File.ReadAllText(privateDataPath)) ?? new JPrivateData();
+            // Apply defaults for configuration file paths
+            privateDataPath ??= Path.Combine(exeDirPath, PrivateDataPathDefault);
+            gnisClassDataPath ??= Path.Combine(exeDirPath, GnisClassDataPathDefault);
+            errataPath ??= Path.Combine(exeDirPath, ErrataPathDefault);
+            overpassUrl ??= OverpassUrlDefault;
 
-                // set default user agent string
-                if (String.IsNullOrEmpty(_privateData.UserAgent) && !String.IsNullOrEmpty(_privateData.OperatorEmail))
-                    // note that Wikidata expects the user agent string to be "program-name/0.0 (user@emailhost)"
-                    _privateData.UserAgent = $"{userAgentBaseString} ({_privateData.OperatorEmail})";
+            // read the private data file
+            PrivateData = JsonSerializer.Deserialize<JPrivateData>(File.ReadAllText(privateDataPath)) ?? new JPrivateData();
 
-                // read the GNIS class attributes
-                GnisClassData gnisClassData = new(gnisClassDataPath);
+            // set default user agent string
+            if (string.IsNullOrEmpty(PrivateData.UserAgent) && !string.IsNullOrEmpty(PrivateData.OperatorEmail))
+            {
+                // note that Wikidata expects the user agent string to be "program-name/0.0 (user@emailhost)"
+                PrivateData.UserAgent = $"{UserAgentBaseString} ({PrivateData.OperatorEmail})";
+            }
 
-                // configure the query builder
-                OverpassQueryBuilder overpassQueryBuilder = new(gnisClassData, overpassUrl);
+            // read the GNIS class attributes
+            GnisClassData gnisClassData = new(gnisClassDataPath);
 
-                // configure the gnis matcher
-                _gnisMatcher = new(gnisClassData);
+            // configure the query builder
+            OverpassQueryBuilder overpassQueryBuilder = new(gnisClassData, overpassUrl);
 
-                // configure the gnis validator
-                _gnisValidator = new(gnisClassData);
+            // configure the gnis matcher
+            GnisMatcher = new(gnisClassData);
 
-                // read the errata file
-                JErrata errataObject = JsonSerializer.Deserialize<JErrata>(File.ReadAllText(errataPath)) ?? new JErrata();
-                Dictionary<string, Erratum> errata = new();
-                foreach (Erratum erratum in errataObject.Errata)
-                    errata.Add(erratum.Id, erratum);
+            // configure the gnis validator
+            GnisValidator = new(gnisClassData);
 
-                Verbose.WriteLine(Directory.GetCurrentDirectory());
+            // read the errata file
+            JErrata errataObject = JsonSerializer.Deserialize<JErrata>(File.ReadAllText(errataPath)) ?? new JErrata();
+            Dictionary<string, Erratum> errata = [];
+            foreach (Erratum erratum in errataObject.Errata)
+            {
+                errata.Add(erratum.Id, erratum);
+            }
 
-                // set up the output file writers
-                using GnisFileReader gnisFileReader = new(gnisFilePath);
-                using TsvFileWriter tsvFileWriter = new(tsvFilePath);
-                using MapRouletteChallengeWriter mapRouletteChallengeWriter = new(gnisClassData, mapRouletteOutputPath, mapRouletteOutputType);
-                using OsmChangeWriter osmChangeWriter = new(gnisClassData, osmChangeOutputPath);
+            Verbose.WriteLine(Directory.GetCurrentDirectory());
 
-                PerformanceTimer runTimer = new("Entire Run");
-                PerformanceTimer gnisRecordTimer = new("Entire Record");
-                PerformanceTimer proximityQueryTimer = new("Proximity Query");
-                PerformanceTimer proximityMatchTimer = new("Proximity Match");
-                PerformanceTimer secondQueryTimer = new("Second Query");
-                PerformanceTimer secondMatchTimer = new("Second Match");
-                PerformanceTimer validationTimer = new("Validation");
-                PerformanceTimer outputTimer = new("Output");
+            // set up the output file writers
+            using GnisFileReader gnisFileReader = new(gnisFilePath);
+            using TsvFileWriter tsvFileWriter = new(tsvFilePath);
+            using MapRouletteChallengeWriter mapRouletteChallengeWriter = new(gnisClassData, mapRouletteOutputPath, mapRouletteOutputType);
+            using OsmChangeWriter osmChangeWriter = new(gnisClassData, osmChangeOutputPath);
 
-                Verbose.WriteLine("Initialized");
-                initializationTimer.Stop(0);
-                runTimer.Start(0);
+            PerformanceTimer runTimer = new("Entire Run");
+            PerformanceTimer gnisRecordTimer = new("Entire Record");
+            PerformanceTimer proximityQueryTimer = new("Proximity Query");
+            PerformanceTimer proximityMatchTimer = new("Proximity Match");
+            PerformanceTimer secondQueryTimer = new("Second Query");
+            PerformanceTimer secondMatchTimer = new("Second Match");
+            PerformanceTimer validationTimer = new("Validation");
+            PerformanceTimer outputTimer = new("Output");
 
-                // process each GNIS record in parallel
-                // this proves to be a more robust threading model than breaking the processing down into smaller tasks
-                Parallel.ForEach(gnisFileReader, new ParallelOptions { MaxDegreeOfParallelism = 8 }, ( fileRecord, parallelLoopState, iteration ) =>
+            Verbose.WriteLine("Initialized");
+            initializationTimer.Stop(0);
+            runTimer.Start(0);
+
+            // process each GNIS record in parallel
+            // this proves to be a more robust threading model than breaking the processing down into smaller tasks
+            Parallel.ForEach(gnisFileReader, new ParallelOptions { MaxDegreeOfParallelism = 8 }, (fileRecord, parallelLoopState, iteration) =>
+            {
+                gnisRecordTimer.Start(iteration);
+
+                GnisRecord gnisRecord = fileRecord;
+                List<GnisMatchResult> matchResults;
+                string overpassQuery;
+                XOsmData? osmData;
+                Erratum erratum = errata.TryGetValue(gnisRecord.FeatureId, out Erratum? value) ? value : Erratum.Empty;
+
+                Progress.WriteLine($"{gnisRecord.FeatureId} {gnisRecord.FeatureName} ({gnisRecord.FeatureClass})");
+
+                // if the errata contains a replacement for this record
+                if (!string.IsNullOrEmpty(erratum.Substitute))
                 {
-                    gnisRecordTimer.Start(iteration);
+                    gnisRecord = gnisFileReader.ParseRecord(erratum.Substitute);
+                    Progress.WriteLine($"{gnisRecord.FeatureId} {gnisRecord.FeatureName} ({gnisRecord.FeatureClass}) -- Substitute");
+                }
 
-                    GnisRecord gnisRecord = fileRecord;
-                    List<GnisMatchResult> matchResults;
-                    string overpassQuery;
-                    XOsmData? osmData;
-                    Erratum erratum = errata.TryGetValue(gnisRecord.FeatureId, out Erratum? value) ? value : Erratum.Empty;
+                GnisClassAttributes gnisClassAttributes = gnisClassData.GetGnisClassAttributes(gnisRecord.FeatureClass);
 
-                    Progress.WriteLine($"{gnisRecord.FeatureId} {gnisRecord.FeatureName} ({gnisRecord.FeatureClass})");
+                bool censusDivision = (gnisRecord.FeatureClass.Equals("Census", StringComparison.Ordinal) || gnisRecord.FeatureClass.Equals("Civil", StringComparison.Ordinal)) && gnisRecord.FeatureName.EndsWith("Division", StringComparison.Ordinal);
 
-                    // if the errata contains a replacement for this record
-                    if (!string.IsNullOrEmpty(erratum.Substitute))
+                // skip all the classes that are not current because we can't link to the gnis records
+                // and skip all records flagged to be skipped in the errata
+                // and skip all records with 0,0 as primary coordinates
+                // and skip all records for census divisions because we don't need to map them
+                if ((!gnisClassAttributes.Current && !archived) || erratum.Skip || gnisRecord.HasZeroPrimary() || censusDivision)
+                {
+                    Progress.WriteLine("...");
+
+                    gnisRecordTimer.Stop(iteration);
+
+                    // continue with the next GNIS record
+                    return;
+                }
+                else
+                {
+                    proximityQueryTimer.Start(iteration);
+
+                    // first pass query for nodes, ways, and relations near the feature's primary coordinates
+
+                    // if the errata does not specify an OSM object to be used
+                    if (erratum.Use == null)
                     {
-                        gnisRecord = gnisFileReader.ParseRecord(erratum.Substitute);
-                        Progress.WriteLine($"{gnisRecord.FeatureId} {gnisRecord.FeatureName} ({gnisRecord.FeatureClass}) -- Substitute");
-                    }
-
-                    GnisClassAttributes gnisClassAttributes = gnisClassData.GetGnisClassAttributes(gnisRecord.FeatureClass);
-
-                    bool censusDivision = (gnisRecord.FeatureClass.Equals("Census") || gnisRecord.FeatureClass.Equals("Civil")) && gnisRecord.FeatureName.EndsWith("Division");
-
-                    // skip all the classes that are not current because we can't link to the gnis records
-                    // and skip all records flagged to be skipped in the errata
-                    // and skip all records with 0,0 as primary coordinates
-                    // and skip all records for census divisions because we don't need to map them
-                    if ((!gnisClassAttributes.Current && !archived) || erratum.Skip || gnisRecord.HasZeroPrimary() || censusDivision)
-                    {
-                        Progress.WriteLine("...");
-
-                        gnisRecordTimer.Stop(iteration);
-
-                        // continue with the next GNIS record
-                        return;
+                        // build the proximity query
+                        overpassQuery = overpassQueryBuilder.BuildProximityQuery(gnisRecord);
                     }
                     else
                     {
-                        proximityQueryTimer.Start(iteration);
-
-                        // first pass query for nodes, ways, and relations near the feature's primary coordinates
-
-                        // if the errata does not specify an OSM object to be used
-                        if (erratum.Use == null)
-                            // build the proximity query
-                            overpassQuery = overpassQueryBuilder.BuildProximityQuery(gnisRecord);
-                        else
-                            // build a query for the specific OSM feature
-                            overpassQuery = OverpassQueryBuilder.BuildObjectQuery(erratum.Use.Type, erratum.Use.Ref);
-
-                        Verbose.WriteLine(overpassQuery);
-
-                        osmData = overpassQueryBuilder.SendQuery(overpassQuery);
-
-                        proximityQueryTimer.Stop(iteration);
-                        proximityMatchTimer.Start(iteration);
-
-                        matchResults = _gnisMatcher.GetMatchResults(gnisRecord, osmData);
-
-                        proximityMatchTimer.Stop(iteration);
+                        // build a query for the specific OSM feature
+                        overpassQuery = OverpassQueryBuilder.BuildObjectQuery(erratum.Use.Type, erratum.Use.Ref);
                     }
 
-                    // if there are no match results or if this is a waterway
-                    // waterways get special treatment because we need to find all the component ways even if they're not part of a relation
-                    if (matchResults.Count == 0 || gnisClassAttributes.IsWaterwayClass())
+                    Verbose.WriteLine(overpassQuery);
+
+                    osmData = overpassQueryBuilder.SendQuery(overpassQuery);
+
+                    proximityQueryTimer.Stop(iteration);
+                    proximityMatchTimer.Start(iteration);
+
+                    matchResults = GnisMatcher.GetMatchResults(gnisRecord, osmData);
+
+                    proximityMatchTimer.Stop(iteration);
+                }
+
+                // if there are no match results or if this is a waterway
+                // waterways get special treatment because we need to find all the component ways even if they're not part of a relation
+                if (matchResults.Count == 0 || gnisClassAttributes.IsWaterwayClass())
+                {
+                    // second pass query for features with matching name and primary tag over a larger area
+
+                    secondQueryTimer.Start(iteration);
+
+                    overpassQuery = overpassQueryBuilder.BuildSecondQuery(gnisRecord);
+
+                    Verbose.WriteLine(overpassQuery);
+
+                    osmData = XOsmData.Merge(osmData, overpassQueryBuilder.SendQuery(overpassQuery));
+
+                    secondQueryTimer.Stop(iteration);
+                    secondMatchTimer.Start(iteration);
+
+                    List<GnisMatchResult> secondMatchResults = GnisMatcher.GetMatchResults(gnisRecord, osmData);
+
+                    // remove duplicate matches
+                    foreach (GnisMatchResult firstResult in matchResults)
                     {
-                        // second pass query for features with matching name and primary tag over a larger area
-
-                        secondQueryTimer.Start(iteration);
-
-                        overpassQuery = overpassQueryBuilder.BuildSecondQuery(gnisRecord);
-
-                        Verbose.WriteLine(overpassQuery);
-
-                        osmData = XOsmData.Merge(osmData,overpassQueryBuilder.SendQuery(overpassQuery));
-
-                        secondQueryTimer.Stop(iteration);
-                        secondMatchTimer.Start(iteration);
-
-                        List<GnisMatchResult> secondMatchResults = _gnisMatcher.GetMatchResults(gnisRecord, osmData);
-
-                        // remove duplicate matches
-                        foreach (GnisMatchResult firstResult in matchResults)
+                        for (int i = 0; i < secondMatchResults.Count; i++)
                         {
-                            for (int i = 0; i < secondMatchResults.Count; i++)
+                            if (firstResult.OsmFeature.Id == secondMatchResults[i].OsmFeature.Id)
                             {
-                                if (firstResult.osmFeature.Id == secondMatchResults[i].osmFeature.Id)
-                                {
-                                    secondMatchResults.RemoveAt(i);
-                                    i--;
-                                }
-                            }
-                        }
-
-                        matchResults.AddRange(secondMatchResults);
-
-                        secondMatchTimer.Stop(iteration);
-                    }
-
-                    validationTimer.Start(iteration);
-
-                    // see if there's an exact match in the results
-                    bool exactMatch = false;
-                    foreach (GnisMatchResult matchResult in matchResults)
-                    {
-                        if (matchResult.MatchType == GnisMatchType.exactMatch)
-                        {
-                            exactMatch = true;
-                            break;
-                        }
-                    }
-
-                    // if there is an exact match in the results
-                    if (exactMatch)
-                    {
-                        // remove all the close matches
-                        for (int i = 0; i < matchResults.Count; i++)
-                        {
-                            if (matchResults[i].MatchType != GnisMatchType.exactMatch)
-                            {
-                                matchResults.Remove(matchResults[i]);
+                                secondMatchResults.RemoveAt(i);
                                 i--;
                             }
                         }
                     }
 
-                    List<GnisValidationResult> validationResults = new();
+                    matchResults.AddRange(secondMatchResults);
 
-                    // validate each match and output the TSV data
-                    foreach (GnisMatchResult matchResult in matchResults)
+                    secondMatchTimer.Stop(iteration);
+                }
+
+                validationTimer.Start(iteration);
+
+                // see if there's an exact match in the results
+                bool exactMatch = false;
+                foreach (GnisMatchResult matchResult in matchResults)
+                {
+                    if (matchResult.MatchType == GnisMatchType.ExactMatch)
                     {
-                        GnisValidationResult validationResult = _gnisValidator.ValidateOsmFeature(gnisRecord, matchResult);
-                        validationResults.Add(validationResult);
-
-                        // write output with match details
-                        if (!_skipMatches)
-                            tsvFileWriter.WriteOutputRecord(gnisRecord, overpassQuery, matchResult, validationResult);
+                        exactMatch = true;
+                        break;
                     }
+                }
 
-                    validationTimer.Stop(iteration);
-                    outputTimer.Start(iteration);
-
-                    // if there was still no match for the record
-                    if (matchResults.Count == 0)
+                // if there is an exact match in the results
+                if (exactMatch)
+                {
+                    // remove all the close matches
+                    for (int i = 0; i < matchResults.Count; i++)
                     {
-                        // don't write output for historical features with no match
-                        if (!gnisRecord.IsHistorical())
+                        if (matchResults[i].MatchType != GnisMatchType.ExactMatch)
                         {
-                            // the feature is not historical
-
-                            // write output without any match or validation data
-                            tsvFileWriter.WriteOutputRecord(gnisRecord);
-
-                            // write MapRoulette challenge without any match or validation data
-                            mapRouletteChallengeWriter.WriteTask(gnisRecord);
-
-                            // add to OsmChange without any match or validation data
-                            osmChangeWriter.AddToOsmChange(gnisRecord);
+                            matchResults.Remove(matchResults[i]);
+                            i--;
                         }
-
-                        // if the feature is historical and we found a match
-                        // we wrote the record out earlier so that it can be validated and updated as needed
                     }
-                    else if (matchResults.Count == 1 && !_skipMatches)
+                }
+
+                List<GnisValidationResult> validationResults = [];
+
+                // validate each match and output the TSV data
+                foreach (GnisMatchResult matchResult in matchResults)
+                {
+                    GnisValidationResult validationResult = GnisValidator.ValidateOsmFeature(gnisRecord, matchResult);
+                    validationResults.Add(validationResult);
+
+                    // write output with match details
+                    if (!SkipMatches)
                     {
+                        tsvFileWriter.WriteOutputRecord(gnisRecord, overpassQuery, matchResult, validationResult);
+                    }
+                }
+
+                validationTimer.Stop(iteration);
+                outputTimer.Start(iteration);
+
+                // if there was still no match for the record
+                if (matchResults.Count == 0)
+                {
+                    // don't write output for historical features with no match
+                    if (!gnisRecord.IsHistorical())
+                    {
+                        // the feature is not historical
+
+                        // write output without any match or validation data
+                        tsvFileWriter.WriteOutputRecord(gnisRecord);
+
+                        // write MapRoulette challenge without any match or validation data
+                        mapRouletteChallengeWriter.WriteTask(gnisRecord);
+
+                        // add to OsmChange without any match or validation data
+                        osmChangeWriter.AddToOsmChange(gnisRecord);
+                    }
+
+                    // if the feature is historical and we found a match
+                    // we wrote the record out earlier so that it can be validated and updated as needed
+                }
+                else if (matchResults.Count == 1 && !SkipMatches)
+                {
+                    // write MapRoulette task with match details
+                    mapRouletteChallengeWriter.WriteTask(gnisRecord, matchResults[0], validationResults[0]);
+
+                    // add to OsmChange with match details
+                    osmChangeWriter.AddToOsmChange(gnisRecord, matchResults[0], validationResults[0]);
+                }
+                else if (!SkipMatches)
+                {
+                    GnisMatchResult? bestResult = GnisMatcher.FindBestMatch(matchResults);
+                    if (bestResult != null)
+                    {
+                        int index = matchResults.IndexOf(bestResult);
+
                         // write MapRoulette task with match details
-                        mapRouletteChallengeWriter.WriteTask(gnisRecord, matchResults[0], validationResults[0]);
+                        mapRouletteChallengeWriter.WriteTask(gnisRecord, matchResults[index], validationResults[index]);
 
                         // add to OsmChange with match details
-                        osmChangeWriter.AddToOsmChange(gnisRecord, matchResults[0], validationResults[0]);
+                        osmChangeWriter.AddToOsmChange(gnisRecord, matchResults[index], validationResults[index]);
                     }
-                    else if (!_skipMatches)
+                    else
                     {
-                        GnisMatchResult? bestResult = GnisMatcher.FindBestMatch(matchResults);
-                        if (bestResult != null)
+                        GnisMatchResult? newMatchResult = null;
+                        GnisValidationResult? newValidationResult = null;
+                        GnisMatcher.ConsolidateMatches(gnisRecord, matchResults, validationResults, newMatchResult, newValidationResult);
+
+                        if (newMatchResult != null && newValidationResult != null)
                         {
-                            int index = matchResults.IndexOf(bestResult);
+                            // write MapRoulette task with new match details
+                            mapRouletteChallengeWriter.WriteTask(gnisRecord, newMatchResult, newValidationResult);
 
-                            // write MapRoulette task with match details
-                            mapRouletteChallengeWriter.WriteTask(gnisRecord, matchResults[index], validationResults[index]);
-
-                            // add to OsmChange with match details
-                            osmChangeWriter.AddToOsmChange(gnisRecord, matchResults[index], validationResults[index]);
+                            // add to OsmChange with new match details
+                            osmChangeWriter.AddToOsmChange(gnisRecord, newMatchResult, newValidationResult);
                         }
                         else
                         {
-                            GnisMatchResult? newMatchResult = null;
-                            GnisValidationResult? newValidationResult = null;
-                            _gnisMatcher.ConsolidateMatches(gnisRecord, matchResults, validationResults, newMatchResult, newValidationResult);
+                            // output a simple MapRoulette task for the full collection of results
+                            mapRouletteChallengeWriter.WriteTask(gnisRecord, matchResults, validationResults);
 
-                            if (newMatchResult != null && newValidationResult != null)
-                            {
-                                // write MapRoulette task with new match details
-                                mapRouletteChallengeWriter.WriteTask(gnisRecord, newMatchResult, newValidationResult);
-
-                                // add to OsmChange with new match details
-                                osmChangeWriter.AddToOsmChange(gnisRecord, newMatchResult, newValidationResult);
-                            }
-                            else
-                            {
-                                // output a simple MapRoulette task for the full collection of results
-                                mapRouletteChallengeWriter.WriteTask(gnisRecord, matchResults, validationResults);
-
-                                // skip the OsmChange because this task needs human intervention
-                                // osmChangeWriter.AddToOsmChange(gnisRecord, matchResults, validationResults);
-                            }
+                            // skip the OsmChange because this task needs human intervention
+                            // osmChangeWriter.AddToOsmChange(gnisRecord, matchResults, validationResults);
                         }
                     }
+                }
 
-                    outputTimer.Stop(iteration);
-                    gnisRecordTimer.Stop(iteration);
-                });
+                outputTimer.Stop(iteration);
+                gnisRecordTimer.Stop(iteration);
+            });
 
-                // write the OsmChange XML to the output file
-                osmChangeWriter.WriteOsmChange();
+            // write the OsmChange XML to the output file
+            osmChangeWriter.WriteOsmChange();
 
-                runTimer.Stop(0);
+            runTimer.Stop(0);
 
-                Performance.WriteLine(initializationTimer.GetSummary());
-                Performance.WriteLine(proximityQueryTimer.GetSummary());
-                Performance.WriteLine(proximityMatchTimer.GetSummary());
-                Performance.WriteLine(secondQueryTimer.GetSummary());
-                Performance.WriteLine(secondMatchTimer.GetSummary());
-                Performance.WriteLine(validationTimer.GetSummary());
-                Performance.WriteLine(outputTimer.GetSummary());
-                Performance.WriteLine(gnisRecordTimer.GetSummary());
-                Performance.WriteLine(runTimer.GetSummary());
-            }
-            catch (Exception e)
-            {
-                Console.Error.WriteLine(e.ToString());
-            }
+            Performance.WriteLine(initializationTimer.GetSummary());
+            Performance.WriteLine(proximityQueryTimer.GetSummary());
+            Performance.WriteLine(proximityMatchTimer.GetSummary());
+            Performance.WriteLine(secondQueryTimer.GetSummary());
+            Performance.WriteLine(secondMatchTimer.GetSummary());
+            Performance.WriteLine(validationTimer.GetSummary());
+            Performance.WriteLine(outputTimer.GetSummary());
+            Performance.WriteLine(gnisRecordTimer.GetSummary());
+            Performance.WriteLine(runTimer.GetSummary());
         }
     }
 }

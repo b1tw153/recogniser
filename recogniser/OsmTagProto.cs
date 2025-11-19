@@ -1,6 +1,6 @@
-﻿namespace recogniser
+﻿namespace Recogniser
 {
-    public class OsmTagProto
+    internal class OsmTagProto
     {
         private readonly string name;
         private readonly string value;
@@ -21,7 +21,7 @@
             }
             else
             {
-                throw new Exception("Invalid tag format: " + tag);
+                throw new FormatException("Invalid tag format: " + tag);
             }
         }
 
@@ -52,9 +52,9 @@
 
         public bool Matches(string name, string value)
         {
-            if (this.name.Equals(name) || "*".Equals(name) || "*".Equals(this.name))
+            if (this.name.Equals(name, StringComparison.Ordinal) || "*".Equals(name, StringComparison.Ordinal) || "*".Equals(this.name, StringComparison.Ordinal))
             {
-                if (this.value.Equals(value) || "*".Equals(value) || "*".Equals(this.value))
+                if (this.value.Equals(value, StringComparison.Ordinal) || "*".Equals(value, StringComparison.Ordinal) || "*".Equals(this.value, StringComparison.Ordinal))
                 {
                     return true;
                 }

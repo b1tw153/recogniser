@@ -1,31 +1,34 @@
-﻿namespace recogniser
+﻿// <copyright file="OsmChangeWriter.cs" company="recogniser project contributors">
+// Copyright (c) 2025 recogniser project contributors.
+// Licensed under the AGPL-3.0-or-later license. See LICENSE file in the project root for full license information.
+// </copyright>
+
+namespace Recogniser
 {
     internal class OsmChangeWriter : IDisposable
     {
-        private readonly TextWriter _outputStreamWriter;
-        private readonly XOsmChange _osmChange = new();
-        private readonly OsmChangeBuilder _osmChangeBuilder;
-        private bool _disposedValue;
+        private readonly TextWriter outputStreamWriter;
+        private readonly XOsmChange osmChange = new();
+        private readonly OsmChangeBuilder osmChangeBuilder;
+        private readonly StreamWriter? innerStreamWriter;
+        private readonly Lock outputStreamWriterLock = new();
+        private bool disposedValue;
 
         public OsmChangeWriter(GnisClassData gnisClassData, string? osmChangeOutputPath)
         {
-            _osmChangeBuilder = new(gnisClassData);
+            osmChangeBuilder = new(gnisClassData);
 
             // open the output file
             if (string.IsNullOrEmpty(osmChangeOutputPath))
-                _outputStreamWriter = TextWriter.Synchronized(new StreamWriter(Stream.Null));
+            {
+                innerStreamWriter = new StreamWriter(Stream.Null);
+            }
             else
-                _outputStreamWriter = TextWriter.Synchronized(new StreamWriter(osmChangeOutputPath));
-        }
+            {
+                innerStreamWriter = new StreamWriter(osmChangeOutputPath);
+            }
 
-        public void AddToOsmChange(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult)
-        {
-            _osmChangeBuilder.AddToOsmChange(_osmChange, gnisRecord, matchResult, validationResult);
-        }
-
-        public void AddToOsmChange(GnisRecord gnisRecord)
-        {
-            _osmChangeBuilder.AddToOsmChange(_osmChange, gnisRecord);
+            outputStreamWriter = TextWriter.Synchronized(innerStreamWriter);
         }
 
         public static void AddToOsmChange(GnisRecord gnisRecord, List<GnisMatchResult> matchResults, List<GnisValidationResult> validationResults)
@@ -35,27 +38,45 @@
             // don't add this to the OsmChange
         }
 
+        public void AddToOsmChange(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult)
+        {
+            osmChangeBuilder.AddToOsmChange(osmChange, gnisRecord, matchResult, validationResult);
+        }
+
+        public void AddToOsmChange(GnisRecord gnisRecord)
+        {
+            osmChangeBuilder.AddToOsmChange(osmChange, gnisRecord);
+        }
+
         public void WriteOsmChange()
         {
-            lock (_outputStreamWriter)
+            lock (outputStreamWriterLock)
             {
-                _outputStreamWriter.Write(_osmChange.Serialize());
+                outputStreamWriter.Write(osmChange.Serialize());
             }
+        }
+
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!_disposedValue)
+            if (!disposedValue)
             {
                 if (disposing)
                 {
                     // dispose managed state (managed objects)
-                    _outputStreamWriter.Dispose();
+                    outputStreamWriter.Dispose();
+                    innerStreamWriter?.Dispose();
                 }
 
                 // free unmanaged resources (unmanaged objects) and override finalizer
                 // set large fields to null
-                _disposedValue = true;
+                disposedValue = true;
             }
         }
 
@@ -65,12 +86,5 @@
         //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         //     Dispose(disposing: false);
         // }
-
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
-        }
     }
 }

@@ -2,26 +2,25 @@
 using System.ComponentModel;
 using System.Xml.Serialization;
 
-namespace recogniser
+namespace Recogniser
 {
     [Serializable()]
     [DesignerCategory("code")]
     [XmlType(AnonymousType = true)]
-
-    public abstract class OsmFeature
+    internal abstract class OsmFeature
     {
-        public enum FeatureType
+        internal enum FeatureType
         {
             node,
             way,
             relation
         }
 
-        private OsmTagCollection? _tagCollection = null;
+        private OsmTagCollection? _tagCollection;
 
         /// <remarks/>
         [XmlElement("tag")]
-        public List<OsmTag> Tags { get; set; } = new List<OsmTag>();
+        public List<OsmTag> Tags { get; set; } = [];
 
         /// <remarks/>
         [XmlAttribute("id")]
@@ -68,18 +67,22 @@ namespace recogniser
 
         public string GetName()
         {
-            OsmTag? nameTag = Tags.Find(tag => "name".Equals(tag.Key));
+            OsmTag? nameTag = Tags.Find(tag => "name".Equals(tag.Key, StringComparison.Ordinal));
             string name = nameTag != null ? nameTag.Value : string.Empty;
             return name;
         }
 
         public void AddTag(OsmTag tag)
         {
-            OsmTag? existingTag = Tags.Find(t => t.Key.Equals(tag.Key));
+            OsmTag? existingTag = Tags.Find(t => t.Key.Equals(tag.Key, StringComparison.Ordinal));
             if (existingTag != null)
+            {
                 existingTag.Value = tag.Value;
+            }
             else
+            {
                 Tags.Add(tag);
+            }
         }
 
         public void RemoveTag(OsmTagProto tag)
@@ -106,7 +109,7 @@ namespace recogniser
 
     }
 
-    public class OsmLinearExtent
+    internal class OsmLinearExtent
     {
         private readonly GeoCoordinate _start;
         private readonly GeoCoordinate _end;

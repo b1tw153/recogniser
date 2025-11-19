@@ -1,8 +1,13 @@
-﻿using System.Text.Json.Serialization;
+﻿// <copyright file="JMapRouletteGeoJson.cs" company="recogniser project contributors">
+// Copyright (c) 2025 recogniser project contributors.
+// Licensed under the AGPL-3.0-or-later license. See LICENSE file in the project root for full license information.
+// </copyright>
 
-namespace recogniser
+namespace Recogniser
 {
-    public class JMapRouletteGeoJson
+    using System.Text.Json.Serialization;
+
+    internal class JMapRouletteGeoJson
     {
         [JsonPropertyName("type")]
         public string Type { get; set; } = "FeatureCollection";
@@ -11,14 +16,14 @@ namespace recogniser
         public string Generator { get; set; } = Program.PrivateData.UserAgent;
 
         [JsonPropertyName("features")]
-        public List<GeoJsonFeature> Features { get; set; } = new();
+        public List<GeoJsonFeature> Features { get; set; } = [];
 
         [JsonPropertyName("cooperativeWork")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public Cooperativework? CooperativeWork { get; set; } = null;
     }
 
-    public class Cooperativework
+    internal class Cooperativework
     {
         [JsonPropertyName("meta")]
         public CooperativeworkMeta Meta { get; set; } = new();
@@ -32,7 +37,7 @@ namespace recogniser
         public List<TagFixOperation>? Operations { get; set; } = null;
     }
 
-    public class CooperativeworkMeta
+    internal class CooperativeworkMeta
     {
         [JsonPropertyName("version")]
         public int Version { get; set; } = 2;
@@ -41,7 +46,7 @@ namespace recogniser
         public int Type { get; set; } = 2;
     }
 
-    public class CooperativeworkFile
+    internal class CooperativeworkFile
     {
         [JsonPropertyName("type")]
         public string Type { get; set; } = "xml";
@@ -56,28 +61,26 @@ namespace recogniser
         public string Content { get; set; } = string.Empty;
     }
 
-    public class TagFixOperation
+    internal class TagFixOperation
     {
         [JsonPropertyName("operationType")]
         public string OperationType { get; set; } = "modifyElement";
 
         [JsonPropertyName("data")]
-        public List<TagFixIndependentOperation> Data { get; set; } = new();
-
+        public List<TagFixIndependentOperation> Data { get; set; } = [];
     }
 
-    public class TagFixIndependentOperation
+    internal class TagFixIndependentOperation
     {
         [JsonPropertyName("id")]
         public string Id { get; set; } = string.Empty;
 
         [JsonPropertyName("operations")]
-        public List<TagFixDependentOperation> Operations { get; set; } = new();
+        public List<TagFixDependentOperation> Operations { get; set; } = [];
     }
 
-    public class TagFixDependentOperation
+    internal class TagFixDependentOperation
     {
-
         [JsonPropertyName("operation")]
         public string Operation { get; set; } = string.Empty;
 
@@ -86,13 +89,13 @@ namespace recogniser
         public object? Data { get; set; } = null;
     }
 
-    public class GeoJsonFeature
+    internal class GeoJsonFeature
     {
         [JsonPropertyName("type")]
         public string Type { get; set; } = "Feature";
 
         [JsonPropertyName("properties")]
-        public Dictionary<string, string> Properties { get; set; } = new Dictionary<string, string>();
+        public Dictionary<string, string> Properties { get; set; } = [];
 
         [JsonPropertyName("geometry")]
         public object Geometry { get; set; } = new GeoJsonPointGeometry();
@@ -101,39 +104,39 @@ namespace recogniser
         public long Id { get; set; }
     }
 
-    public class GeoJsonPointGeometry
+    internal class GeoJsonPointGeometry
     {
         [JsonPropertyName("type")]
         public string Type { get; set; } = "Point";
 
         [JsonPropertyName("coordinates")]
-        public double[] Coordinates { get; set; } = Array.Empty<double>();
+        public double[] Coordinates { get; set; } = [];
     }
 
-    public class GeoJsonMultiPointGeometry
+    internal class GeoJsonMultiPointGeometry
     {
         [JsonPropertyName("type")]
         public string Type { get; set; } = "MultiPoint";
 
         [JsonPropertyName("coordinates")]
-        public double[][] Coordinates { get; set; } = Array.Empty<double[]>();
+        public double[][] Coordinates { get; set; } = [];
     }
 
-    public class GeoJsonLineStringGeometry
+    internal class GeoJsonLineStringGeometry
     {
         [JsonPropertyName("type")]
         public string Type { get; set; } = "LineString";
 
         [JsonPropertyName("coordinates")]
-        public double[][] Coordinates { get; set; } = Array.Empty<double[]>();
+        public double[][] Coordinates { get; set; } = [];
     }
 
-    public class GeoJsonMultiLineStringGeometry
+    internal class GeoJsonMultiLineStringGeometry
     {
         [JsonPropertyName("type")]
         public string Type { get; set; } = "MultiLineString";
 
         [JsonPropertyName("coordinates")]
-        public double[][][] Coordinates { get; set; } = Array.Empty<double[][]>();
+        public double[][][] Coordinates { get; set; } = [];
     }
 }

@@ -1,6 +1,13 @@
-﻿namespace recogniser
+﻿// <copyright file="OsmChangeBuilder.cs" company="recogniser project contributors">
+// Copyright (c) 2025 recogniser project contributors.
+// Licensed under the AGPL-3.0-or-later license. See LICENSE file in the project root for full license information.
+// </copyright>
+
+namespace Recogniser
 {
-    public class OsmChangeBuilder
+    using System.Globalization;
+
+    internal class OsmChangeBuilder
     {
         private readonly GnisClassData gnisClassData;
 
@@ -10,21 +17,7 @@
         }
 
         /// <summary>
-        /// Build an OsmChange XML string to create a new feature based on a GNIS record
-        /// </summary>
-        /// <param name="gnisRecord"></param>
-        /// <returns></returns>
-        internal string? BuildOsmChange(GnisRecord gnisRecord)
-        {
-            XOsmChange osmChange = new();
-
-            AddToOsmChange(osmChange, gnisRecord);
-
-            return osmChange.IsEmpty() ? null : osmChange.Serialize();
-        }
-
-        /// <summary>
-        /// Build an OsmChange XML string for a single matched OSM feature
+        /// Build an OsmChange XML string for a single matched OSM feature.
         /// </summary>
         /// <param name="gnisRecord"></param>
         /// <param name="matchResult"></param>
@@ -41,7 +34,7 @@
 
         public void AddToOsmChange(XOsmChange osmChange, GnisRecord gnisRecord)
         {
-            List<OsmFeature> newOsmFeatures = new();
+            List<OsmFeature> newOsmFeatures = [];
 
             // don't build OsmChange XML for unmatched Civil or Census classes because they can't be mapped as points and we don't have the boundary polygons
             //if ("Civil".Equals(gnisRecord.FeatureClass) || "Census".Equals(gnisRecord.FeatureClass))
@@ -77,23 +70,29 @@
             }
 
             foreach (OsmFeature newFeature in newOsmFeatures)
+            {
                 osmChange.Create(newFeature);
+            }
         }
 
         public void AddToOsmChange(XOsmChange osmChange, GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult)
         {
             bool modified = false;
             bool created = false;
-            List<OsmFeature> newOsmFeatures = new();
-            List<OsmFeature> modifiedOsmFeatures = new();
+            List<OsmFeature> newOsmFeatures = [];
+            List<OsmFeature> modifiedOsmFeatures = [];
 
             // don't modify the feature if there was a conflicting match
-            if (matchResult.MatchType == GnisMatchType.conflictingMatch)
+            if (matchResult.MatchType == GnisMatchType.ConflictingMatch)
+            {
                 return;
+            }
 
             // if the matchResult is for a newly created feature
-            if (matchResult.osmFeature.Id < 0)
+            if (matchResult.OsmFeature.Id < 0)
+            {
                 created = true;
+            }
 
             modified |= ModifyFeatureId(gnisRecord, matchResult, validationResult);
 
@@ -105,21 +104,43 @@
 
             if (modified || created)
             {
-                DeleteExtraGnisTags(matchResult.osmFeature);
+                DeleteExtraGnisTags(matchResult.OsmFeature);
 
                 if (created)
-                    osmChange.Create(matchResult.osmFeature);
+                {
+                    osmChange.Create(matchResult.OsmFeature);
+                }
                 else
-                    osmChange.Modify(matchResult.osmFeature);
+                {
+                    osmChange.Modify(matchResult.OsmFeature);
+                }
 
                 foreach (OsmFeature newFeature in newOsmFeatures)
+                {
                     osmChange.Create(newFeature);
+                }
 
                 // this is ok even if the modified feature is the same as the original feature
                 // because the OsmChange method enforces uniqueness
                 foreach (OsmFeature modifiedFeature in modifiedOsmFeatures)
+                {
                     osmChange.Modify(modifiedFeature);
+                }
             }
+        }
+
+        /// <summary>
+        /// Build an OsmChange XML string to create a new feature based on a GNIS record.
+        /// </summary>
+        /// <param name="gnisRecord"></param>
+        /// <returns></returns>
+        internal string? BuildOsmChange(GnisRecord gnisRecord)
+        {
+            XOsmChange osmChange = new();
+
+            AddToOsmChange(osmChange, gnisRecord);
+
+            return osmChange.IsEmpty() ? null : osmChange.Serialize();
         }
 
         private static void DeleteExtraGnisTags(OsmFeature osmFeature)
@@ -128,8 +149,10 @@
 
             foreach (OsmTag tag in tags)
             {
-                if (Program.extraGnisTags.Contains(tag.Key))
+                if (Program.ExtraGnisTags.Contains(tag.Key))
+                {
                     osmFeature.RemoveTag(new OsmTagProto(tag.Key, tag.Value));
+                }
             }
         }
 
@@ -143,16 +166,16 @@
             if (!matchResult.GeometryReversed)
             {
                 startNode = gnisRecord.HasSource() ? new(gnisRecord.Source) : null;
-                startNode?.SetParent(matchResult.osmFeature.GetParent());
+                startNode?.SetParent(matchResult.OsmFeature.GetParent());
                 endNode = new(gnisRecord.Primary);
-                endNode.SetParent(matchResult.osmFeature.GetParent());
+                endNode.SetParent(matchResult.OsmFeature.GetParent());
             }
             else
             {
                 startNode = new(gnisRecord.Primary);
-                startNode.SetParent(matchResult.osmFeature.GetParent());
+                startNode.SetParent(matchResult.OsmFeature.GetParent());
                 endNode = gnisRecord.HasSource() ? new(gnisRecord.Source) : null;
-                endNode?.SetParent(matchResult.osmFeature.GetParent());
+                endNode?.SetParent(matchResult.OsmFeature.GetParent());
             }
 
             // note that this method can add duplicate features to modifiedOsmFeatures
@@ -177,13 +200,13 @@
 
                     if (gnisRecord.HasSource())
                     {
-                        if (matchResult.osmFeature is not OsmNode osmNode)
+                        if (matchResult.OsmFeature is not OsmNode osmNode)
                         {
                             // propose new start node
-                            modified |= AddStartNode(startNode, matchResult.osmFeature, newOsmFeatures, modifiedOsmFeatures);
+                            modified |= AddStartNode(startNode, matchResult.OsmFeature, newOsmFeatures, modifiedOsmFeatures);
 
                             // propose new end node
-                            modified |= AddEndNode(endNode, matchResult.osmFeature, newOsmFeatures, modifiedOsmFeatures);
+                            modified |= AddEndNode(endNode, matchResult.OsmFeature, newOsmFeatures, modifiedOsmFeatures);
 
                             return modified;
                         }
@@ -191,12 +214,12 @@
                         {
                             // convert the feature to a way
                             OsmWay newWay = new();
-                            newWay.SetParent(matchResult.osmFeature.GetParent());
+                            newWay.SetParent(matchResult.OsmFeature.GetParent());
                             newWay.AddEndNode(osmNode);
 
                             // move the tags to the way
                             newWay.Tags = osmNode.Tags;
-                            osmNode.Tags = new();
+                            osmNode.Tags = [];
 
                             // add new start and end nodes
                             AddStartNode(startNode, newWay, newOsmFeatures, modifiedOsmFeatures);
@@ -207,7 +230,7 @@
                     }
                     else
                     {
-                        if (matchResult.osmFeature is OsmNode osmNode)
+                        if (matchResult.OsmFeature is OsmNode osmNode)
                         {
                             // propose new coordinates
                             osmNode.SetCoordinate(gnisRecord.Primary);
@@ -216,6 +239,7 @@
 
                             return true;
                         }
+
                         // otherwise make no modifications
                         return false;
                     }
@@ -234,20 +258,20 @@
                     // propose new end coordinates
                     if (gnisRecord.HasSource())
                     {
-                        if (matchResult.osmFeature is not OsmNode osmNode)
+                        if (matchResult.OsmFeature is not OsmNode osmNode)
                         {
-                            return modified | AddEndNode(endNode, matchResult.osmFeature, newOsmFeatures, modifiedOsmFeatures);
+                            return modified | AddEndNode(endNode, matchResult.OsmFeature, newOsmFeatures, modifiedOsmFeatures);
                         }
                         else
                         {
                             // convert the feature to a way
                             OsmWay newWay = new();
-                            newWay.SetParent(matchResult.osmFeature.GetParent());
+                            newWay.SetParent(matchResult.OsmFeature.GetParent());
                             newWay.AddStartNode(osmNode);
 
                             // move the tags to the way
                             newWay.Tags = osmNode.Tags;
-                            osmNode.Tags = new();
+                            osmNode.Tags = [];
 
                             // add new end node
                             AddEndNode(endNode, newWay, newOsmFeatures, modifiedOsmFeatures);
@@ -256,7 +280,9 @@
                         }
                     }
                     else
+                    {
                         return modified;
+                    }
 
                 case GnisGeometryValidation.FEATURE_COORDINATE_START_PRIMARY_OFF:
                 case GnisGeometryValidation.FEATURE_COORDINATE_START_SOURCE_OFF:
@@ -272,20 +298,20 @@
                     // propose new start coordinates
                     if (gnisRecord.HasSource())
                     {
-                        if (matchResult.osmFeature is not OsmNode osmNode)
+                        if (matchResult.OsmFeature is not OsmNode osmNode)
                         {
-                            return modified | AddStartNode(startNode, matchResult.osmFeature, newOsmFeatures, modifiedOsmFeatures);
+                            return modified | AddStartNode(startNode, matchResult.OsmFeature, newOsmFeatures, modifiedOsmFeatures);
                         }
                         else
                         {
                             // convert the feature to a way
                             OsmWay newWay = new();
-                            newWay.SetParent(matchResult.osmFeature.GetParent());
+                            newWay.SetParent(matchResult.OsmFeature.GetParent());
                             newWay.AddEndNode(osmNode);
 
                             // move the tags to the way
                             newWay.Tags = osmNode.Tags;
-                            osmNode.Tags = new();
+                            osmNode.Tags = [];
 
                             // add new start node
                             AddStartNode(startNode, newWay, newOsmFeatures, modifiedOsmFeatures);
@@ -294,7 +320,9 @@
                         }
                     }
                     else
+                    {
                         return modified;
+                    }
 
                 case GnisGeometryValidation.NOT_PROCESSED:
                     return false;
@@ -312,10 +340,13 @@
 
                 OsmFeature? modifiedWay = osmFeature.AddStartNode(startNode);
                 if (modifiedWay != null)
+                {
                     modifiedOsmFeatures.Add(modifiedWay);
+                }
 
                 return true;
             }
+
             return false;
         }
 
@@ -327,10 +358,13 @@
 
                 OsmFeature? modifiedWay = osmFeature.AddEndNode(endNode);
                 if (modifiedWay != null)
+                {
                     modifiedOsmFeatures.Add(modifiedWay);
+                }
 
                 return true;
             }
+
             return false;
         }
 
@@ -349,6 +383,152 @@
         }
         */
 
+
+        private static bool ModifyName(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult)
+        {
+            OsmTagCollection tags = matchResult.OsmFeature.GetTagCollection();
+
+            switch (validationResult.nameValidation)
+            {
+                case GnisNameValidation.OK:
+                    return false;
+
+                case GnisNameValidation.FEATURE_NAME_MISSING:
+
+                    // add the feature name
+                    matchResult.OsmFeature.AddTag(new OsmTag("name", gnisRecord.FeatureName));
+
+                    return true;
+
+                case GnisNameValidation.FEATURE_NAME_MISMATCH:
+                case GnisNameValidation.FEATURE_NAME_DIFFERENT:
+                    return false;
+
+                case GnisNameValidation.FEATURE_NAME_DEPRECATED_KEY:
+                case GnisNameValidation.FEATURE_NAME_DIFFERENT_DEPRECATED_KEY:
+                    // if the "name" key is unused
+                    if (!tags.ContainsKey("name"))
+                    {
+                        // move the name to the "name" key
+                        string name = matchResult.OsmFeature.GetTagCollection()[matchResult.NameKey] ?? string.Empty;
+                        matchResult.OsmFeature.AddTag(new OsmTag("name", name));
+                        matchResult.OsmFeature.RemoveTag(new OsmTagProto(matchResult.NameKey, "*"));
+                        return true;
+                    }
+
+                    return false;
+
+                case GnisNameValidation.NOT_PROCESSED:
+                    return false;
+
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
+        private static bool ModifyFeatureId(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult)
+        {
+            OsmTagCollection tags = matchResult.OsmFeature.GetTagCollection();
+            string[] oldValues;
+            long[] newValues;
+            string newValue;
+
+            switch (validationResult.featureIdValidation)
+            {
+                case GnisFeatureIdValidation.OK:
+                    return false;
+
+                case GnisFeatureIdValidation.FEATURE_ID_MISSING:
+
+                    // add gnis:feature_id tag
+                    matchResult.OsmFeature.AddTag(new OsmTag("gnis:feature_id", gnisRecord.FeatureId));
+
+                    return true;
+
+                case GnisFeatureIdValidation.FEATURE_ID_MISMATCH:
+                    return false;
+
+                case GnisFeatureIdValidation.FEATURE_ID_MALFORMED_VALUE:
+                case GnisFeatureIdValidation.FEATURE_ID_EXTRANEOUS_CHARACTERS:
+
+                    // remove the old gnis:feature_id tag
+                    matchResult.OsmFeature.RemoveTag(new OsmTagProto("gnis:feature_id", "*"));
+
+                    // add gnis:feature_id tag
+                    matchResult.OsmFeature.AddTag(new OsmTag("gnis:feature_id", gnisRecord.FeatureId));
+
+                    return true;
+
+                case GnisFeatureIdValidation.FEATURE_ID_MULTIPLE_VALUES:
+                    return false;
+
+                case GnisFeatureIdValidation.FEATURE_ID_MULTIPLE_VALUES_EXTRANEOUS_CHARACTERS:
+
+                    // build a clean tag value
+                    string? multiValue = matchResult.OsmFeature.GetTagCollection()["gnis:feature_id"];
+                    oldValues = multiValue != null ? multiValue.Split(";") : [];
+                    newValues = new long[oldValues.Length];
+
+                    for (int i = 0; i < oldValues.Length; i++)
+                    {
+                        // dangerous, but this should not throw an exception
+                        newValues[i] = long.Parse(oldValues[i], CultureInfo.InvariantCulture);
+                    }
+
+                    newValue = string.Join(";", newValues);
+
+                    // remove the old gnis:feature_id tag
+                    matchResult.OsmFeature.RemoveTag(new OsmTagProto("gnis:feature_id", "*"));
+
+                    // add gnis:feature_id tag
+                    matchResult.OsmFeature.AddTag(new OsmTag("gnis:feature_id", newValue));
+
+                    return true;
+
+                case GnisFeatureIdValidation.FEATURE_ID_WRONG_KEY:
+                case GnisFeatureIdValidation.FEATURE_ID_WRONG_KEY_EXTRANEOUS_CHARACTERS:
+
+                    // add gnis:feature_id tag
+                    matchResult.OsmFeature.AddTag(new OsmTag("gnis:feature_id", gnisRecord.FeatureId));
+
+                    // delete the synonymous/unexpected key
+                    matchResult.OsmFeature.RemoveTag(new OsmTagProto(matchResult.FeatureIdKey, "*"));
+
+                    return true;
+
+                case GnisFeatureIdValidation.FEATURE_ID_WRONG_KEY_MULTIPLE_VALUES:
+                case GnisFeatureIdValidation.FEATURE_ID_WRONG_KEY_MULTIPLE_VALUES_EXTRANEOUS_CHARACTERS:
+
+                    // collect the old values
+                    oldValues = tags[matchResult.FeatureIdKey]?.Split(";") ?? [];
+
+                    // build a clean value
+                    newValues = new long[oldValues.Length];
+
+                    for (int i = 0; i < oldValues.Length; i++)
+                    {
+                        // dangerous, but this should not throw an exception
+                        newValues[i] = long.Parse(oldValues[i], CultureInfo.InvariantCulture);
+                    }
+
+                    newValue = string.Join(";", newValues);
+
+                    // remove the old wrong tag
+                    matchResult.OsmFeature.RemoveTag(new OsmTagProto(matchResult.FeatureIdKey, "*"));
+
+                    // add gnis:feature_id tag
+                    matchResult.OsmFeature.AddTag(new OsmTag("gnis:feature_id", newValue));
+
+                    return true;
+
+                case GnisFeatureIdValidation.NOT_PROCESSED:
+                    return false;
+
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
         private bool ModifyTags(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult)
         {
             switch (validationResult.tagValidation)
@@ -356,13 +536,13 @@
                 case GnisTagValidation.OK:
                     return false;
                 case GnisTagValidation.FEATURE_CLASS_PRIMARY_TAG_MISSING:
-                    return AddPrimaryTag(gnisRecord, matchResult.osmFeature);
+                    return AddPrimaryTag(gnisRecord, matchResult.OsmFeature);
                 case GnisTagValidation.FEATURE_CLASS_SECONDARY_TAG_MISSING:
-                    return AddSecondaryTag(gnisRecord, matchResult.osmFeature);
+                    return AddSecondaryTag(gnisRecord, matchResult.OsmFeature);
                 case GnisTagValidation.FEATURE_CLASS_TAGS_MISSING:
                     bool modified = false;
-                    modified |= AddPrimaryTag(gnisRecord, matchResult.osmFeature);
-                    modified |= AddSecondaryTag(gnisRecord, matchResult.osmFeature);
+                    modified |= AddPrimaryTag(gnisRecord, matchResult.OsmFeature);
+                    modified |= AddSecondaryTag(gnisRecord, matchResult.OsmFeature);
                     return modified;
                 case GnisTagValidation.NOT_PROCESSED:
                     return false;
@@ -399,150 +579,5 @@
 
             return false;
         }
-
-        private static bool ModifyName(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult)
-        {
-            OsmTagCollection tags = matchResult.osmFeature.GetTagCollection();
-
-            switch (validationResult.nameValidation)
-            {
-                case GnisNameValidation.OK:
-                    return false;
-
-                case GnisNameValidation.FEATURE_NAME_MISSING:
-
-                    // add the feature name
-                    matchResult.osmFeature.AddTag(new OsmTag("name", gnisRecord.FeatureName));
-
-                    return true;
-
-                case GnisNameValidation.FEATURE_NAME_MISMATCH:
-                case GnisNameValidation.FEATURE_NAME_DIFFERENT:
-                    return false;
-
-                case GnisNameValidation.FEATURE_NAME_DEPRECATED_KEY:
-                case GnisNameValidation.FEATURE_NAME_DIFFERENT_DEPRECATED_KEY:
-                    // if the "name" key is unused
-                    if (!tags.ContainsKey("name"))
-                    {
-                        // move the name to the "name" key
-                        string name = matchResult.osmFeature.GetTagCollection()[matchResult.nameKey] ?? string.Empty;
-                        matchResult.osmFeature.AddTag(new OsmTag("name", name));
-                        matchResult.osmFeature.RemoveTag(new OsmTagProto(matchResult.nameKey, "*"));
-                        return true;
-                    }
-                    return false;
-
-                case GnisNameValidation.NOT_PROCESSED:
-                    return false;
-
-                default:
-                    throw new NotImplementedException();
-            }
-        }
-
-        private static bool ModifyFeatureId(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult)
-        {
-            OsmTagCollection tags = matchResult.osmFeature.GetTagCollection();
-            string[] oldValues;
-            long[] newValues;
-            string newValue;
-
-            switch (validationResult.featureIdValidation)
-            {
-                case GnisFeatureIdValidation.OK:
-                    return false;
-
-                case GnisFeatureIdValidation.FEATURE_ID_MISSING:
-
-                    // add gnis:feature_id tag
-                    matchResult.osmFeature.AddTag(new OsmTag("gnis:feature_id", gnisRecord.FeatureId));
-
-                    return true;
-
-                case GnisFeatureIdValidation.FEATURE_ID_MISMATCH:
-                    return false;
-
-                case GnisFeatureIdValidation.FEATURE_ID_MALFORMED_VALUE:
-                case GnisFeatureIdValidation.FEATURE_ID_EXTRANEOUS_CHARACTERS:
-
-                    // remove the old gnis:feature_id tag
-                    matchResult.osmFeature.RemoveTag(new OsmTagProto("gnis:feature_id", "*"));
-
-                    // add gnis:feature_id tag
-                    matchResult.osmFeature.AddTag(new OsmTag("gnis:feature_id", gnisRecord.FeatureId));
-
-                    return true;
-
-                case GnisFeatureIdValidation.FEATURE_ID_MULTIPLE_VALUES:
-                    return false;
-
-                case GnisFeatureIdValidation.FEATURE_ID_MULTIPLE_VALUES_EXTRANEOUS_CHARACTERS:
-
-                    // build a clean tag value
-                    string? multiValue = matchResult.osmFeature.GetTagCollection()["gnis:feature_id"];
-                    oldValues = multiValue != null ? multiValue.Split(";") : Array.Empty<string>();
-                    newValues = new long[oldValues.Length];
-
-                    for (int i = 0; i < oldValues.Length; i++)
-                    {
-                        // dangerous, but this should not throw an exception
-                        newValues[i] = long.Parse(oldValues[i]);
-                    }
-
-                    newValue = string.Join(";", newValues);
-
-                    // remove the old gnis:feature_id tag
-                    matchResult.osmFeature.RemoveTag(new OsmTagProto("gnis:feature_id", "*"));
-
-                    // add gnis:feature_id tag
-                    matchResult.osmFeature.AddTag(new OsmTag("gnis:feature_id", newValue));
-
-                    return true;
-
-                case GnisFeatureIdValidation.FEATURE_ID_WRONG_KEY:
-                case GnisFeatureIdValidation.FEATURE_ID_WRONG_KEY_EXTRANEOUS_CHARACTERS:
-
-                    // add gnis:feature_id tag
-                    matchResult.osmFeature.AddTag(new OsmTag("gnis:feature_id", gnisRecord.FeatureId));
-
-                    // delete the synonymous/unexpected key
-                    matchResult.osmFeature.RemoveTag(new OsmTagProto(matchResult.featureIdKey, "*"));
-
-                    return true;
-
-                case GnisFeatureIdValidation.FEATURE_ID_WRONG_KEY_MULTIPLE_VALUES:
-                case GnisFeatureIdValidation.FEATURE_ID_WRONG_KEY_MULTIPLE_VALUES_EXTRANEOUS_CHARACTERS:
-
-                    // collect the old values
-                    oldValues = tags[matchResult.featureIdKey]?.Split(";") ?? Array.Empty<string>();
-
-                    // build a clean value
-                    newValues = new long[oldValues.Length];
-
-                    for (int i = 0; i < oldValues.Length; i++)
-                    {
-                        // dangerous, but this should not throw an exception
-                        newValues[i] = long.Parse(oldValues[i]);
-                    }
-
-                    newValue = string.Join(";", newValues);
-
-                    // remove the old wrong tag
-                    matchResult.osmFeature.RemoveTag(new OsmTagProto(matchResult.featureIdKey, "*"));
-
-                    // add gnis:feature_id tag
-                    matchResult.osmFeature.AddTag(new OsmTag("gnis:feature_id", newValue));
-
-                    return true;
-
-                case GnisFeatureIdValidation.NOT_PROCESSED:
-                    return false;
-
-                default:
-                    throw new NotImplementedException();
-            }
-        }
-
     }
 }

@@ -1,6 +1,6 @@
-﻿namespace recogniser
+﻿namespace Recogniser
 {
-    public class TsvFileWriter : IDisposable
+    internal class TsvFileWriter : IDisposable
     {
         private readonly TextWriter outputStreamWriter;
         private bool disposedValue;
@@ -34,9 +34,14 @@
         public TsvFileWriter(string? outputFileName)
         {
             if (string.IsNullOrEmpty(outputFileName))
+            {
                 outputStreamWriter = new StreamWriter(Stream.Null);
+            }
             else
+            {
                 outputStreamWriter = new StreamWriter(outputFileName);
+            }
+
             WriteOutputHeader();
         }
 
@@ -49,9 +54,14 @@
                 {
                     object name = field.Name;
                     if (first)
+                    {
                         first = false;
+                    }
                     else
+                    {
                         outputStreamWriter.Write("\t");
+                    }
+
                     outputStreamWriter.Write($"{name}");
                 }
                 outputStreamWriter.WriteLine();
@@ -68,9 +78,13 @@
                     object value = field.GetValue(record) ?? string.Empty;
 
                     if (first)
+                    {
                         first = false;
+                    }
                     else
+                    {
                         outputStreamWriter.Write("\t");
+                    }
 
                     outputStreamWriter.Write($"{value}");
                 }
@@ -95,12 +109,15 @@
             record.SOURCE_LONG_DEC = gnisRecord.SourceLon;
             if (matchResult != null)
             {
-                record.OSM_TYPE = matchResult.osmFeature.GetOsmType().ToString();
-                record.OSM_ID = matchResult.osmFeature.Id.ToString();
-                record.OSM_NAME = matchResult.osmFeature.GetName();
+                record.OSM_TYPE = matchResult.OsmFeature.GetOsmType().ToString();
+                record.OSM_ID = matchResult.OsmFeature.Id.ToString();
+                record.OSM_NAME = matchResult.OsmFeature.GetName();
             }
             if (overpassQuery != null)
+            {
                 record.OVERPASS_QUERY = overpassQuery;
+            }
+
             record.AREA_SOUTH = twoKilometerBox[0].ToString();
             record.AREA_WEST = twoKilometerBox[1].ToString();
             record.AREA_NORTH = twoKilometerBox[2].ToString();
@@ -111,12 +128,12 @@
             record.OSM_LINK = $"=HYPERLINK(\"https://www.openstreetmap.org/#map=18/{record.PRIM_LAT_DEC}/{record.PRIM_LONG_DEC}\",\"{record.PRIM_LAT_DEC}/{record.PRIM_LONG_DEC}\")";
             if (matchResult != null)
             {
-                record.ID_LINK = $"=HYPERLINK(\"https://www.openstreetmap.org/{matchResult.osmFeature.GetOsmType()}/{matchResult.osmFeature.Id}\",\"{matchResult.osmFeature.GetOsmType()}/{matchResult.osmFeature.Id}\")";
+                record.ID_LINK = $"=HYPERLINK(\"https://www.openstreetmap.org/{matchResult.OsmFeature.GetOsmType()}/{matchResult.OsmFeature.Id}\",\"{matchResult.OsmFeature.GetOsmType()}/{matchResult.OsmFeature.Id}\")";
             }
             record.JOSM_AREA_LINK = $"=HYPERLINK(\"http://127.0.0.1:8111/load_and_zoom?left={record.AREA_WEST}&right={record.AREA_EAST}&top={record.AREA_NORTH}&bottom={record.AREA_SOUTH}\",\"{record.PRIM_LAT_DEC}/{record.PRIM_LONG_DEC}\")";
             if (matchResult != null)
             {
-                record.JOSM_OBJECT_LINK = $"=HYPERLINK(\"http://127.0.0.1:8111/load_object?newlayer=false&objects={matchResult.osmFeature.GetOsmType().ToString().ToCharArray()[0]}{matchResult.osmFeature.Id}\",\"{matchResult.osmFeature.GetOsmType().ToString().ToCharArray()[0]}{matchResult.osmFeature.Id}\")";
+                record.JOSM_OBJECT_LINK = $"=HYPERLINK(\"http://127.0.0.1:8111/load_object?newlayer=false&objects={matchResult.OsmFeature.GetOsmType().ToString().ToCharArray()[0]}{matchResult.OsmFeature.Id}\",\"{matchResult.OsmFeature.GetOsmType().ToString().ToCharArray()[0]}{matchResult.OsmFeature.Id}\")";
             }
 
             WriteOutputRecord(record);

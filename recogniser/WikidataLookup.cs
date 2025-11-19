@@ -1,10 +1,10 @@
 ﻿using System.Collections.Concurrent;
 using System.Text.Json.Nodes;
 
-namespace recogniser
+namespace Recogniser
 {
-	public class WikidataLookup
-	{
+    internal class WikidataLookup
+    {
         private static readonly ConcurrentDictionary<string, string> wikidataCache = new();
         private static readonly string baseUrl = @"https://www.wikidata.org/w/rest.php/wikibase/v1";
 
@@ -15,13 +15,17 @@ namespace recogniser
 
             // if the feature does not have a wikidata id
             if (itemId == null)
+            {
                 // return an empty list of GNIS IDs
                 return Array.Empty<string>();
+            }
 
             // if the results of a previous lookup are in our cache
             if (wikidataCache.TryGetValue(itemId, out string? wikidataGnisIds))
+            {
                 // return the cached GNIS IDs
                 return wikidataGnisIds.Split(";");
+            }
 
             // we have a wikidata id and no cached results
 
@@ -48,7 +52,7 @@ namespace recogniser
                 // if we were able to parse the response data
                 if (wikidataItem != null)
                 {
-                    List<string> ids = new();
+                    List<string> ids = [];
 
                     // get the GNIS ID statement
                     JsonNode? wikidataGnisIdStatement = wikidataItem["P590"];
@@ -74,10 +78,10 @@ namespace recogniser
                     }
 
                     // cache all the results
-                    wikidataCache[itemId] = String.Join(";", ids);
+                    wikidataCache[itemId] = string.Join(";", ids);
 
                     // return all the GNIS IDs
-                    return ids.ToArray();
+                    return [.. ids];
                 }
             }
             catch (Exception e)

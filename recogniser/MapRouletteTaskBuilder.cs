@@ -1,11 +1,14 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.Design;
-using System.Text.Json;
+﻿// <copyright file="MapRouletteTaskBuilder.cs" company="recogniser project contributors">
+// Copyright (c) 2025 recogniser project contributors.
+// Licensed under the AGPL-3.0-or-later license. See LICENSE file in the project root for full license information.
+// </copyright>
 
-namespace recogniser
+namespace Recogniser
 {
+    using System.Globalization;
+    using System.Text.Json;
 
-    public class MapRouletteTaskBuilder
+    internal class MapRouletteTaskBuilder
     {
         private readonly InstructionBuilder instructionBuilder;
 
@@ -48,36 +51,17 @@ namespace recogniser
         /// Build a plain MapRoulette task for a single OSM feature that matched the GNIS record.
         /// </summary>
         /// <param name="gnisRecord"></param>
-        /// <param name="matchResults"></param>
-        /// <param name="validationResults"></param>
+        /// <param name="matchResult"></param>
+        /// <param name="validationResult"></param>
         /// <returns></returns>
         public string BuildPlainMapRouletteTask(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult)
         {
             JMapRouletteGeoJson task = new();
 
-            GeoJsonFeature osmFeature = ConvertToGeoJsonFeature(matchResult.osmFeature, gnisRecord);
+            GeoJsonFeature osmFeature = ConvertToGeoJsonFeature(matchResult.OsmFeature, gnisRecord);
             task.Features.Add(osmFeature);
 
             string instructions = instructionBuilder.BuildPlainInstructions(gnisRecord, matchResult, validationResult);
-            osmFeature.Properties.Add("instructions", instructions);
-
-            return JsonSerializer.Serialize(task);
-        }
-
-        /// <summary>
-        /// Build a plain MapRoulette where there was no OSM feature that matched the GNIS record
-        /// </summary>
-        /// <param name="gnisRecord"></param>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
-        internal string BuildPlainMapRouletteTask(GnisRecord gnisRecord)
-        {
-            JMapRouletteGeoJson task = new();
-
-            GeoJsonFeature osmFeature = ConvertToGeoJsonFeature(gnisRecord);
-            task.Features.Add(osmFeature);
-
-            string instructions = instructionBuilder.BuildPlainNoMatchInstructions(gnisRecord);
             osmFeature.Properties.Add("instructions", instructions);
 
             return JsonSerializer.Serialize(task);
@@ -96,7 +80,7 @@ namespace recogniser
             // build an OSC task to modify an existing OSM feature
             JMapRouletteGeoJson task = new();
 
-            GeoJsonFeature osmFeature = ConvertToGeoJsonFeature(matchResult.osmFeature, gnisRecord);
+            GeoJsonFeature osmFeature = ConvertToGeoJsonFeature(matchResult.OsmFeature, gnisRecord);
             task.Features.Add(osmFeature);
 
             if (osmChangeXml != null)
@@ -105,21 +89,47 @@ namespace recogniser
                 {
                     File = new()
                     {
-                        Content = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(osmChangeXml))
-                    }
+                        Content = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(osmChangeXml)),
+                    },
                 };
             }
 
             string instructions;
-            if (matchResult.MatchType != GnisMatchType.conflictingMatch)
+            if (matchResult.MatchType != GnisMatchType.ConflictingMatch)
             {
-                if (matchResult.specialCondition == GnisMatchSpecialCondition.NEW_RELATION)
+                if (matchResult.SpecialCondition == GnisMatchSpecialCondition.NEW_RELATION)
+                {
                     instructions = instructionBuilder.BuildNewRelationInstructions(gnisRecord, matchResult, validationResult);
+                }
                 else
+                {
                     instructions = instructionBuilder.BuildSingleMatchInstructions(gnisRecord, matchResult, validationResult);
+                }
             }
             else
+            {
                 instructions = instructionBuilder.BuildPlainInstructions(gnisRecord, matchResult, validationResult);
+            }
+
+            osmFeature.Properties.Add("instructions", instructions);
+
+            return JsonSerializer.Serialize(task);
+        }
+
+        /// <summary>
+        /// Build a plain MapRoulette where there was no OSM feature that matched the GNIS record.
+        /// </summary>
+        /// <param name="gnisRecord"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        internal string BuildPlainMapRouletteTask(GnisRecord gnisRecord)
+        {
+            JMapRouletteGeoJson task = new();
+
+            GeoJsonFeature osmFeature = ConvertToGeoJsonFeature(gnisRecord);
+            task.Features.Add(osmFeature);
+
+            string instructions = instructionBuilder.BuildPlainNoMatchInstructions(gnisRecord);
             osmFeature.Properties.Add("instructions", instructions);
 
             return JsonSerializer.Serialize(task);
@@ -145,8 +155,8 @@ namespace recogniser
                 {
                     File = new()
                     {
-                        Content = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(osmChangeXml))
-                    }
+                        Content = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(osmChangeXml)),
+                    },
                 };
             }
 
@@ -169,12 +179,12 @@ namespace recogniser
             // build a Tag Fix task to modify an existing OSM feature
             JMapRouletteGeoJson task = new();
 
-            GeoJsonFeature gnisFeature = ConvertToGeoJsonFeature(matchResult.osmFeature, gnisRecord);
+            GeoJsonFeature gnisFeature = ConvertToGeoJsonFeature(matchResult.OsmFeature, gnisRecord);
             task.Features.Add(gnisFeature);
 
             task.CooperativeWork = new()
             {
-                Operations = operations
+                Operations = operations,
             };
 
             string instructions = instructionBuilder.BuildTagFixInstructions(gnisRecord, matchResult, validationResult);
@@ -196,21 +206,22 @@ namespace recogniser
             {
                 feature.Geometry = new GeoJsonPointGeometry()
                 {
-                    Coordinates = new double[] { gnisRecord.Primary.Longitude, gnisRecord.Primary.Latitude }
+                    Coordinates = [gnisRecord.Primary.Longitude, gnisRecord.Primary.Latitude],
                 };
             }
             else
             {
                 feature.Geometry = new GeoJsonLineStringGeometry()
                 {
-                    Coordinates = new double[][]{
-                        new double[] { gnisRecord.Source.Longitude, gnisRecord.Source.Latitude },
-                        new double[] { gnisRecord.Primary.Longitude, gnisRecord.Primary.Latitude }
-                    }
+                    Coordinates =
+                    [
+                        [gnisRecord.Source.Longitude, gnisRecord.Source.Latitude],
+                        [gnisRecord.Primary.Longitude, gnisRecord.Primary.Latitude],
+                    ],
                 };
             }
 
-            feature.Id = -long.Parse(gnisRecord.FeatureId);
+            feature.Id = -long.Parse(gnisRecord.FeatureId, CultureInfo.InvariantCulture);
 
             return feature;
         }
@@ -232,7 +243,7 @@ namespace recogniser
             {
                 feature.Geometry = new GeoJsonPointGeometry()
                 {
-                    Coordinates = new double[] { node.Lon, node.Lat }
+                    Coordinates = [node.Lon, node.Lat],
                 };
             }
 
@@ -241,15 +252,17 @@ namespace recogniser
                 GeoJsonLineStringGeometry geometry = new();
                 feature.Geometry = geometry;
 
-                List<double[]> coordinates = new();
+                List<double[]> coordinates = [];
 
                 foreach (OsmWayNode wayNodeRef in way.Nodes)
                 {
                     if (way.GetNode(wayNodeRef) is OsmNode wayNode)
-                        coordinates.Add(new double[] { wayNode.Lon, wayNode.Lat });
+                    {
+                        coordinates.Add([wayNode.Lon, wayNode.Lat]);
+                    }
                 }
 
-                geometry.Coordinates = coordinates.ToArray();
+                geometry.Coordinates = [.. coordinates];
             }
 
             if (osmFeature is OsmRelation relation)
@@ -257,7 +270,7 @@ namespace recogniser
                 GeoJsonMultiLineStringGeometry geometry = new();
                 feature.Geometry = geometry;
 
-                List<double[][]> coordinates = new();
+                List<double[][]> coordinates = [];
                 double[]? labelCoordinates = null;
                 double[]? adminCoordinates = null;
 
@@ -268,59 +281,66 @@ namespace recogniser
                     if (member is OsmNode memberNode)
                     {
                         // if this is a label for a boundary relation
-                        if ("label".Equals(relationMember.Role) && memberNode != null)
+                        if ("label".Equals(relationMember.Role, StringComparison.Ordinal) && memberNode != null)
                         {
-                            labelCoordinates = new double[] { memberNode.Lon, memberNode.Lat };
+                            labelCoordinates = [memberNode.Lon, memberNode.Lat];
                         }
-                        else if ("admin_centre".Equals(relationMember.Role) && memberNode != null)
+                        else if ("admin_centre".Equals(relationMember.Role, StringComparison.Ordinal) && memberNode != null)
                         {
-                            adminCoordinates = new double[] { memberNode.Lon, memberNode.Lat };
+                            adminCoordinates = [memberNode.Lon, memberNode.Lat];
                         }
                         else
+                        {
                             continue;
+                        }
                     }
 
                     if (member is OsmWay memberWay)
                     {
-                        List<double[]> wayCoordinates = new();
+                        List<double[]> wayCoordinates = [];
 
                         foreach (OsmWayNode wayNodeRef in memberWay.Nodes)
                         {
                             if (memberWay.GetNode(wayNodeRef) is OsmNode wayNode)
-                                wayCoordinates.Add(new double[] { wayNode.Lon, wayNode.Lat });
+                            {
+                                wayCoordinates.Add([wayNode.Lon, wayNode.Lat]);
+                            }
                         }
 
-                        coordinates.Add(wayCoordinates.ToArray());
+                        coordinates.Add([.. wayCoordinates]);
                     }
                 }
 
                 // if the relation members were downloaded
                 if (coordinates.Count > 0)
                 {
-                    geometry.Coordinates = coordinates.ToArray();
+                    geometry.Coordinates = [.. coordinates];
                 }
+
                 // if the relation members weren't downloaded but we got a label node
                 else if (labelCoordinates != null)
                 {
                     feature.Geometry = new GeoJsonPointGeometry()
                     {
-                        Coordinates = labelCoordinates
+                        Coordinates = labelCoordinates,
                     };
                 }
+
                 // or if we got an admin_centre node
                 else if (adminCoordinates != null)
                 {
                     feature.Geometry = new GeoJsonPointGeometry()
                     {
-                        Coordinates = adminCoordinates
+                        Coordinates = adminCoordinates,
                     };
                 }
+
                 // otherwise just drop a pin at the primary location from the GNIS record
                 else
                 {
                     feature.Geometry = new GeoJsonPointGeometry()
                     {
-                        Coordinates = new double[] { gnisRecord.Primary.Longitude, gnisRecord.Primary.Latitude }
+                        Coordinates = [gnisRecord.Primary.Longitude, gnisRecord.Primary.Latitude],
                     };
                 }
             }

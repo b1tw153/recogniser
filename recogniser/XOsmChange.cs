@@ -1,13 +1,13 @@
 ﻿using System.Xml;
 using System.Xml.Serialization;
 
-namespace recogniser
+namespace Recogniser
 {
 
     [Serializable()]
     [XmlType(AnonymousType = true)]
     [XmlRoot(Namespace = "", ElementName = "osmChange", IsNullable = false)]
-    public class XOsmChange
+    internal class XOsmChange
     {
         [XmlAttribute("version")]
         public double Version { get; set; } = 0.6;
@@ -21,16 +21,16 @@ namespace recogniser
         [XmlElement("modify")]
         public ChangeSection? ModifySection { get; set; } = null;
 
-        public class ChangeSection
+        internal class ChangeSection
         {
             [XmlElement("node")]
-            public List<OsmNode> Nodes { get; set; } = new List<OsmNode>();
+            public List<OsmNode> Nodes { get; set; } = [];
 
             [XmlElement("way")]
-            public List<OsmWay> Ways { get; set; } = new List<OsmWay>();
+            public List<OsmWay> Ways { get; set; } = [];
 
             [XmlElement("relation")]
-            public List<OsmRelation> Relations { get; set; } = new List<OsmRelation>();
+            public List<OsmRelation> Relations { get; set; } = [];
         }
 
         public bool IsEmpty()
@@ -51,7 +51,9 @@ namespace recogniser
 
                     // if we already had it in the modify list, remove it
                     if (ModifySection?.Nodes.Contains(node) ?? false)
+                    {
                         ModifySection.Nodes.Remove(node);
+                    }
                 }
 
                 // if it's not already in the create list
@@ -61,7 +63,9 @@ namespace recogniser
 
                     // if we already had it in the modify list, remove it
                     if (ModifySection?.Ways.Contains(way) ?? false)
+                    {
                         ModifySection.Ways.Remove(way);
+                    }
                 }
 
                 // if it's not already in the create list
@@ -71,7 +75,9 @@ namespace recogniser
 
                     // if we already had it in the modify list, remove it
                     if (ModifySection?.Relations.Contains(relation) ?? false)
+                    {
                         ModifySection.Relations.Remove(relation);
+                    }
                 }
             }
         }
@@ -86,19 +92,25 @@ namespace recogniser
                 if (osmFeature is OsmNode node
                     && !ModifySection.Nodes.Contains(node)
                     && !(CreateSection?.Nodes.Contains(node) ?? false))
+                {
                     ModifySection.Nodes.Add(node);
+                }
 
                 // if it's not already in the modify or create list
                 if (osmFeature is OsmWay way
                     && !ModifySection.Ways.Contains(way)
                     && !(CreateSection?.Ways.Contains(way) ?? false))
+                {
                     ModifySection.Ways.Add(way);
+                }
 
                 // if it's not already in the modify or create list
                 if (osmFeature is OsmRelation relation
                     && !ModifySection.Relations.Contains(relation)
                     && !(CreateSection?.Relations.Contains(relation) ?? false))
+                {
                     ModifySection.Relations.Add(relation);
+                }
             }
         }
 

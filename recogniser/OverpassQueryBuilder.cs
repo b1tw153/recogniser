@@ -3,9 +3,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Serialization;
 
-namespace recogniser
+namespace Recogniser
 {
-    public partial class OverpassQueryBuilder
+    internal partial class OverpassQueryBuilder
     {
         private readonly GnisClassData gnisClassData;
         private readonly XmlSerializer overpassSerializer = new(typeof(XOsmData));
@@ -47,10 +47,14 @@ namespace recogniser
                     // filter out nodes that have conflicting tags
                     foreach (OsmTagProto conflictingTag in conflictingTags)
                     {
-                        if ("*".Equals(conflictingTag.Value))
+                        if ("*".Equals(conflictingTag.Value, StringComparison.Ordinal))
+                        {
                             conflictingTagBuilder.Append($"(.points; - node[\"{conflictingTag.Name}\"].points;) -> .points; ");
+                        }
                         else
+                        {
                             conflictingTagBuilder.Append($"(.points; - node[\"{conflictingTag.Name}\"=\"{conflictingTag.Value}\"].points;) -> .points; ");
+                        }
                     }
 
                     query.Append(conflictingTagBuilder);
@@ -71,7 +75,7 @@ namespace recogniser
                 }
 
                 // if the feature can be mapped using any type (or an unspecified type) of relation
-                if ("*".Equals(gnisClassAttributes.RelationTypes))
+                if ("*".Equals(gnisClassAttributes.RelationTypes, StringComparison.Ordinal))
                 {
                     // drop big admin boundaries
                     query.Append($"(.lines; - rel(if: abs(t[\"admin_level\"]) < 6).lines;) -> .lines; ");
@@ -107,10 +111,14 @@ namespace recogniser
                     // filter out ways and relations that have conflicting tags
                     foreach (OsmTagProto conflictingTag in conflictingTags)
                     {
-                        if ("*".Equals(conflictingTag.Value))
+                        if ("*".Equals(conflictingTag.Value, StringComparison.Ordinal))
+                        {
                             conflictingTagBuilder.Append($"(.lines; - wr[\"{conflictingTag.Name}\"].lines;) -> .lines; ");
+                        }
                         else
+                        {
                             conflictingTagBuilder.Append($"(.lines; - wr[\"{conflictingTag.Name}\"=\"{conflictingTag.Value}\"].lines;) -> .lines; ");
+                        }
                     }
 
                     query.Append(conflictingTagBuilder);
@@ -177,12 +185,16 @@ namespace recogniser
             foreach (OsmTagProto tag in gnisClassAttributes.GetPrimaryTags())
             {
                 // if the tag has a wildcard value
-                if ("*".Equals(tag.Value))
+                if ("*".Equals(tag.Value, StringComparison.Ordinal))
+                {
                     // find all features with the name and tag key
                     query.Append($"nwr[\"{tag.Name}\"][\"name\"=\"{escapedFeatureName}\"]({areaFilter}); ");
+                }
                 else
+                {
                     // find all features where the name and specific tag value
                     query.Append($"nwr[\"{tag.Name}\"=\"{tag.Value}\"][\"name\"=\"{escapedFeatureName}\"]({areaFilter}); ");
+                }
             }
 
             query.Append(" ); (._; >;); out meta;");
@@ -260,12 +272,16 @@ namespace recogniser
             foreach (OsmTagProto tag in gnisClassAttributes.GetPrimaryTags())
             {
                 // if the tag has a wildcard value
-                if ("*".Equals(tag.Value))
+                if ("*".Equals(tag.Value, StringComparison.Ordinal))
+                {
                     // find all features with the name and tag key
                     query.Append($"{osmTypes}[\"{tag.Name}\"][\"name\"=\"{escapedFeatureName}\"]; ");
+                }
                 else
+                {
                     // find all features where the name and specific tag value
                     query.Append($"{osmTypes}[\"{tag.Name}\"=\"{tag.Value}\"][\"name\"=\"{escapedFeatureName}\"]; ");
+                }
             }
 
             query.Append(") -> .features; ");
@@ -275,9 +291,13 @@ namespace recogniser
             {
                 // if the feature can be a relation
                 if (!string.IsNullOrEmpty(gnisClassAttributes.RelationTypes))
+                {
                     query.Append($"is_in({gnisRecord.PrimaryLat},{gnisRecord.PrimaryLon})->.a; wr(pivot.a) -> .areas; (.areas; - rel(if: abs(t[\"admin_level\"]) < 6).areas;) -> .areas; ");
+                }
                 else
+                {
                     query.Append($"is_in({gnisRecord.PrimaryLat},{gnisRecord.PrimaryLon})->.a; way(pivot.a) -> .areas; ");
+                }
             }
 
             query.Append("(.features; .features >; .areas; node(w.areas);); out meta; ");
@@ -393,12 +413,12 @@ namespace recogniser
                     Console.Error.WriteLine(e);
                     memoryStream.Position = 0;
                     Console.Error.WriteLine($"Response: {new StreamReader(memoryStream).ReadToEnd()}");
-                    Thread.Sleep((int)Math.Pow(2,i));
-                    Console.Error.WriteLine($"Retry {i+1}: {overpassQuery}");
+                    Thread.Sleep((int)Math.Pow(2, i));
+                    Console.Error.WriteLine($"Retry {i + 1}: {overpassQuery}");
                 }
             }
 
-            throw new Exception("Unable to get a response from Overpass.");
+            throw new HttpRequestException("Unable to get a response from Overpass.");
         }
 
         public async Task<XOsmData?> SendQueryAsync(string overpassQuery)
@@ -420,14 +440,20 @@ namespace recogniser
 
         internal static string BuildObjectQuery(string type, long id)
         {
-            if ("node".Equals(type))
+            if ("node".Equals(type, StringComparison.Ordinal))
+            {
                 return $"node({id}); out meta;";
+            }
 
-            if ("way".Equals(type))
+            if ("way".Equals(type, StringComparison.Ordinal))
+            {
                 return $"(way({id}); >;); out meta;";
+            }
 
-            if ("relation".Equals(type))
+            if ("relation".Equals(type, StringComparison.Ordinal))
+            {
                 return $"(rel({id}); >;); out meta;";
+            }
 
             throw new ArgumentException($"Unknown type: {type}");
         }

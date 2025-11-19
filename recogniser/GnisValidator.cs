@@ -1,6 +1,11 @@
-﻿namespace recogniser
+﻿// <copyright file="GnisValidator.cs" company="recogniser project contributors">
+// Copyright (c) 2025 recogniser project contributors.
+// Licensed under the AGPL-3.0-or-later license. See LICENSE file in the project root for full license information.
+// </copyright>
+
+namespace Recogniser
 {
-    public enum GnisFeatureIdValidation
+    internal enum GnisFeatureIdValidation
     {
         OK,
         FEATURE_ID_MISSING,
@@ -13,10 +18,10 @@
         FEATURE_ID_WRONG_KEY_EXTRANEOUS_CHARACTERS,
         FEATURE_ID_WRONG_KEY_MULTIPLE_VALUES,
         FEATURE_ID_WRONG_KEY_MULTIPLE_VALUES_EXTRANEOUS_CHARACTERS,
-        NOT_PROCESSED
+        NOT_PROCESSED,
     }
 
-    public enum GnisNameValidation
+    internal enum GnisNameValidation
     {
         OK,
         FEATURE_NAME_MISSING,
@@ -24,23 +29,26 @@
         FEATURE_NAME_DEPRECATED_KEY,
         FEATURE_NAME_DIFFERENT,
         FEATURE_NAME_DIFFERENT_DEPRECATED_KEY,
-        NOT_PROCESSED
+        NOT_PROCESSED,
     }
-    public enum GnisTagValidation
+
+    internal enum GnisTagValidation
     {
         OK,
         FEATURE_CLASS_TAGS_MISSING,
         FEATURE_CLASS_SECONDARY_TAG_MISSING,
         FEATURE_CLASS_PRIMARY_TAG_MISSING,
-        NOT_PROCESSED
+        NOT_PROCESSED,
     }
-    public enum GnisConflictingTagValidation
+
+    internal enum GnisConflictingTagValidation
     {
         OK,
         FEATURE_CLASS_CONFLICTING_TAG,
-        NOT_PROCESSED
+        NOT_PROCESSED,
     }
-    public enum GnisGeometryValidation
+
+    internal enum GnisGeometryValidation
     {
         OK,
         FEATURE_COORDINATE_EXTENT_OFF,
@@ -50,60 +58,22 @@
         OK_REVERSED,
         FEATURE_COORDINATE_START_PRIMARY_OFF,
         FEATURE_COORDINATE_END_SOURCE_OFF,
-        FEATURE_COORDINATE_EXTENT_OFF_REVERSED
-    }
-    public class GnisValidationResult
-    {
-        public OsmFeature osmFeature;
-        public GnisFeatureIdValidation featureIdValidation = GnisFeatureIdValidation.NOT_PROCESSED;
-        public GnisNameValidation nameValidation = GnisNameValidation.NOT_PROCESSED;
-        public GnisTagValidation tagValidation = GnisTagValidation.NOT_PROCESSED;
-        public GnisConflictingTagValidation conflictingTagValidation = GnisConflictingTagValidation.NOT_PROCESSED;
-        public GnisGeometryValidation geometryValidation = GnisGeometryValidation.NOT_PROCESSED;
-
-        public GnisValidationResult(OsmFeature osmFeature)
-        {
-            this.osmFeature = osmFeature;
-        }
-
-        public bool AllOk =>
-            (featureIdValidation == GnisFeatureIdValidation.OK || featureIdValidation == GnisFeatureIdValidation.NOT_PROCESSED) &&
-            (nameValidation == GnisNameValidation.OK || nameValidation == GnisNameValidation.NOT_PROCESSED) &&
-            (tagValidation == GnisTagValidation.OK || tagValidation == GnisTagValidation.NOT_PROCESSED) &&
-            (conflictingTagValidation == GnisConflictingTagValidation.OK || conflictingTagValidation == GnisConflictingTagValidation.NOT_PROCESSED) &&
-            (geometryValidation == GnisGeometryValidation.OK || geometryValidation == GnisGeometryValidation.NOT_PROCESSED);
-
-
-        public override string ToString()
-        {
-            List<string> result = new();
-
-            /*
-            if (featureIdValidation == GnisFeatureIdValidation.NOT_PROCESSED
-                || nameValidation == GnisNameValidation.NOT_PROCESSED
-                || tagValidation == GnisTagValidation.NOT_PROCESSED
-                || conflictingTagValidation == GnisConflictingTagValidation.NOT_PROCESSED
-                || geometryValidation == GnisGeometryValidation.NOT_PROCESSED)
-                throw new Exception("All validation should have been processed.");
-            */
-
-            if (featureIdValidation != GnisFeatureIdValidation.OK && featureIdValidation != GnisFeatureIdValidation.NOT_PROCESSED)
-                result.Add(featureIdValidation.ToString());
-            if (nameValidation != GnisNameValidation.OK && nameValidation != GnisNameValidation.NOT_PROCESSED)
-                result.Add(nameValidation.ToString());
-            if (tagValidation != GnisTagValidation.OK && tagValidation != GnisTagValidation.NOT_PROCESSED)
-                result.Add(tagValidation.ToString());
-            if (conflictingTagValidation != GnisConflictingTagValidation.OK && conflictingTagValidation != GnisConflictingTagValidation.NOT_PROCESSED)
-                result.Add(conflictingTagValidation.ToString());
-            if (geometryValidation != GnisGeometryValidation.OK && geometryValidation != GnisGeometryValidation.NOT_PROCESSED)
-                result.Add(geometryValidation.ToString());
-
-            return String.Join(";", result);
-        }
+        FEATURE_COORDINATE_EXTENT_OFF_REVERSED,
     }
 
-    public class GnisValidator
+    internal class GnisValidator
     {
+        private static readonly string[] NameTags =
+        {
+            "name",
+            "official_name",
+            "alt_name",
+            "old_name",
+            "loc_name",
+            "name_1",
+            "name_2",
+        };
+
         private readonly GnisClassData gnisClassData;
 
         public GnisValidator(GnisClassData gnisClassData)
@@ -113,7 +83,7 @@
 
         public GnisValidationResult ValidateOsmFeature(GnisRecord gnisRecord, GnisMatchResult matchResult)
         {
-            GnisValidationResult validationResult = new(matchResult.osmFeature)
+            GnisValidationResult validationResult = new(matchResult.OsmFeature)
             {
                 featureIdValidation = ValidateFeatureId(matchResult),
 
@@ -123,7 +93,7 @@
 
                 conflictingTagValidation = ValidateConflictingTag(matchResult),
 
-                geometryValidation = ValidateGeometry(matchResult)
+                geometryValidation = ValidateGeometry(matchResult),
             };
 
             return validationResult;
@@ -131,17 +101,22 @@
 
         private GnisGeometryValidation ValidateGeometry(GnisMatchResult matchResult)
         {
-            switch (matchResult.geometryMatch)
+            switch (matchResult.GeometryMatch)
             {
                 case GnisGeometryMatch.NOT_PROCESSED:
                     return GnisGeometryValidation.NOT_PROCESSED;
                 case GnisGeometryMatch.NO_MATCH:
-                    if (matchResult.osmFeature is OsmNode || matchResult.osmFeature.GetLinearExtent() != null)
+                    if (matchResult.OsmFeature is OsmNode || matchResult.OsmFeature.GetLinearExtent() != null)
+                    {
                         return GnisGeometryValidation.FEATURE_COORDINATE_EXTENT_OFF;
+                    }
                     else
+                    {
                         // if we didn't download all of this feature
                         // or if it's a closed area
                         return GnisGeometryValidation.NOT_PROCESSED;
+                    }
+
                 case GnisGeometryMatch.FEATURE_COORDINATE_EXACT_MATCH:
                 case GnisGeometryMatch.FEATURE_COORDINATE_CLOSE_MATCH:
                 case GnisGeometryMatch.FEATURE_COORDINATE_EXTENT_EXACT_MATCH:
@@ -173,10 +148,10 @@
 
         private GnisConflictingTagValidation ValidateConflictingTag(GnisMatchResult matchResult)
         {
-            switch (matchResult.conflictingTagMatch)
+            switch (matchResult.ConflictingTagMatch)
             {
                 case GnisConflictingTagMatch.NOT_PROCESSED:
-                    throw new Exception("Conflicting tag match should have been processed");
+                    throw new InvalidOperationException("Conflicting tag match should have been processed");
                 //return GnisConflictingTagValidation.NOT_PROCESSED;
                 case GnisConflictingTagMatch.NO_MATCH:
                     return GnisConflictingTagValidation.OK;
@@ -189,10 +164,10 @@
 
         private GnisTagValidation ValidateTag(GnisMatchResult matchResult)
         {
-            switch (matchResult.tagMatch)
+            switch (matchResult.TagMatch)
             {
                 case GnisTagMatch.NOT_PROCESSED:
-                    throw new Exception("Tag match should have been processed");
+                    throw new InvalidOperationException("Tag match should have been processed");
                 //return GnisTagValidation.NOT_PROCESSED;
                 case GnisTagMatch.NO_MATCH:
                     return GnisTagValidation.FEATURE_CLASS_TAGS_MISSING;
@@ -203,32 +178,21 @@
                 case GnisTagMatch.FEATURE_CLASS_SECONDARY_TAG_MATCH:
                     return GnisTagValidation.FEATURE_CLASS_PRIMARY_TAG_MISSING;
                 default:
-                    throw new NotImplementedException($"Missing case for GnisTagValidation.{matchResult.tagMatch}");
+                    throw new NotImplementedException($"Missing case for GnisTagValidation.{matchResult.TagMatch}");
             }
         }
 
-        private static readonly string[] nameTags =
-        {
-            "name",
-            "official_name",
-            "alt_name",
-            "old_name",
-            "loc_name",
-            "name_1",
-            "name_2"
-        };
-
         private GnisNameValidation ValidateName(GnisMatchResult matchResult)
         {
-            switch (matchResult.nameMatch)
+            switch (matchResult.NameMatch)
             {
                 case GnisNameMatch.NOT_PROCESSED:
-                    throw new Exception("Name match should have been processed");
+                    throw new InvalidOperationException("Name match should have been processed");
                 //return GnisNameValidation.NOT_PROCESSED;
                 case GnisNameMatch.NO_MATCH:
-                    OsmTagCollection tags = matchResult.osmFeature.GetTagCollection();
+                    OsmTagCollection tags = matchResult.OsmFeature.GetTagCollection();
                     bool hasName = false;
-                    foreach (string nameTag in nameTags)
+                    foreach (string nameTag in NameTags)
                     {
                         if (tags.ContainsKey(nameTag))
                         {
@@ -236,10 +200,16 @@
                             break;
                         }
                     }
+
                     if (!hasName)
+                    {
                         return GnisNameValidation.FEATURE_NAME_MISSING;
+                    }
                     else
+                    {
                         return GnisNameValidation.FEATURE_NAME_MISMATCH;
+                    }
+
                 case GnisNameMatch.FEATURE_NAME_EXACT_MATCH:
                 case GnisNameMatch.FEATURE_NAME_EXACT_MATCH_OFFICIAL:
                 case GnisNameMatch.FEATURE_NAME_EXACT_MATCH_ALT:
@@ -259,22 +229,27 @@
                 case GnisNameMatch.FEATURE_NAME_CLOSE_MATCH_2:
                     return GnisNameValidation.FEATURE_NAME_DIFFERENT_DEPRECATED_KEY;
                 default:
-                    throw new NotImplementedException($"Missing case for GnisNameValidation.{matchResult.nameMatch}");
+                    throw new NotImplementedException($"Missing case for GnisNameValidation.{matchResult.NameMatch}");
             }
         }
 
         private GnisFeatureIdValidation ValidateFeatureId(GnisMatchResult matchResult)
         {
-            switch (matchResult.featureIdMatch)
+            switch (matchResult.FeatureIdMatch)
             {
                 case GnisFeatureIdMatch.NOT_PROCESSED:
-                    throw new Exception("Feature ID match should have been processed");
+                    throw new InvalidOperationException("Feature ID match should have been processed");
                 //return GnisFeatureIdValidation.NOT_PROCESSED;
                 case GnisFeatureIdMatch.NO_MATCH:
-                    if (!matchResult.osmFeature.GetTagCollection().ContainsKey("gnis:feature_id"))
+                    if (!matchResult.OsmFeature.GetTagCollection().ContainsKey("gnis:feature_id"))
+                    {
                         return GnisFeatureIdValidation.FEATURE_ID_MISSING;
+                    }
                     else
+                    {
                         return GnisFeatureIdValidation.FEATURE_ID_MISMATCH;
+                    }
+
                 case GnisFeatureIdMatch.FEATURE_ID_MALFORMED_VALUE:
                     return GnisFeatureIdValidation.FEATURE_ID_MALFORMED_VALUE;
                 case GnisFeatureIdMatch.FEATURE_ID_EXACT_MATCH:
@@ -300,7 +275,7 @@
                 case GnisFeatureIdMatch.FEATURE_ID_WIKIDATA_MATCH:
                     return GnisFeatureIdValidation.FEATURE_ID_MISSING;
                 default:
-                    throw new NotImplementedException($"Missing case for GnisFeatureIdMatch.{matchResult.featureIdMatch}");
+                    throw new NotImplementedException($"Missing case for GnisFeatureIdMatch.{matchResult.FeatureIdMatch}");
             }
         }
     }
