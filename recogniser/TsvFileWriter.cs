@@ -1,35 +1,43 @@
-﻿namespace Recogniser
+﻿// <copyright file="TsvFileWriter.cs" company="recogniser project contributors">
+// Copyright (c) 2025 recogniser project contributors.
+// Licensed under the AGPL-3.0-or-later license. See LICENSE file in the project root for full license information.
+// </copyright>
+
+namespace Recogniser
 {
+    using System.Globalization;
+
     internal class TsvFileWriter : IDisposable
     {
-        private readonly TextWriter outputStreamWriter;
-        private bool disposedValue;
+        private static readonly string[] ColumnHeaders =
+        [
+            "FEATURE_ID",
+            "FEATURE_NAME",
+            "FEATURE_CLASS",
+            "PRIM_LAT_DEC",
+            "PRIM_LONG_DEC",
+            "SOURCE_LAT_DEC",
+            "SOURCE_LONG_DEC",
+            "OSM_TYPE",
+            "OSM_ID",
+            "OSM_NAME",
+            "OVERPASS_QUERY",
+            "AREA_SOUTH",
+            "AREA_EAST",
+            "AREA_NORTH",
+            "AREA_WEST",
+            "MATCH_TYPES",
+            "VALIDATION_RESULTS",
+            "GNIS_LINK",
+            "OSM_LINK",
+            "ID_LINK",
+            "JOSM_AREA_LINK",
+            "JOSM_OBJECT_LINK",
+        ];
 
-        private class OutputRecord
-        {
-            public string FEATURE_ID = string.Empty;
-            public string FEATURE_NAME = string.Empty;
-            public string FEATURE_CLASS = string.Empty;
-            public string PRIM_LAT_DEC = string.Empty;
-            public string PRIM_LONG_DEC = string.Empty;
-            public string SOURCE_LAT_DEC = string.Empty;
-            public string SOURCE_LONG_DEC = string.Empty;
-            public string OSM_TYPE = string.Empty;
-            public string OSM_ID = string.Empty;
-            public string OSM_NAME = string.Empty;
-            public string OVERPASS_QUERY = string.Empty;
-            public string AREA_SOUTH = string.Empty;
-            public string AREA_EAST = string.Empty;
-            public string AREA_NORTH = string.Empty;
-            public string AREA_WEST = string.Empty;
-            public string MATCH_TYPES = string.Empty;
-            public string VALIDATION_RESULTS = string.Empty;
-            public string GNIS_LINK = string.Empty;
-            public string OSM_LINK = string.Empty;
-            public string ID_LINK = string.Empty;
-            public string JOSM_AREA_LINK = string.Empty;
-            public string JOSM_OBJECT_LINK = string.Empty;
-        }
+        private readonly TextWriter outputStreamWriter;
+        private readonly Lock outputStreamWriterLock = new();
+        private bool disposedValue;
 
         public TsvFileWriter(string? outputFileName)
         {
@@ -45,98 +53,80 @@
             WriteOutputHeader();
         }
 
-        private void WriteOutputHeader()
-        {
-            lock (outputStreamWriter)
-            {
-                bool first = true;
-                foreach (var field in typeof(OutputRecord).GetFields())
-                {
-                    object name = field.Name;
-                    if (first)
-                    {
-                        first = false;
-                    }
-                    else
-                    {
-                        outputStreamWriter.Write("\t");
-                    }
-
-                    outputStreamWriter.Write($"{name}");
-                }
-                outputStreamWriter.WriteLine();
-            }
-        }
-
-        private void WriteOutputRecord(OutputRecord record)
-        {
-            lock (outputStreamWriter)
-            {
-                bool first = true;
-                foreach (var field in typeof(OutputRecord).GetFields())
-                {
-                    object value = field.GetValue(record) ?? string.Empty;
-
-                    if (first)
-                    {
-                        first = false;
-                    }
-                    else
-                    {
-                        outputStreamWriter.Write("\t");
-                    }
-
-                    outputStreamWriter.Write($"{value}");
-                }
-                outputStreamWriter.WriteLine();
-                outputStreamWriter.Flush();
-            }
-        }
-
         public void WriteOutputRecord(GnisRecord gnisRecord, string? overpassQuery = null, GnisMatchResult? matchResult = null, GnisValidationResult? validationResult = null)
         {
-            OutputRecord record = new();
-
             // make a two kilometer box with the feature at the center (i.e. 1 km in each direction)
             double[] twoKilometerBox = OverpassQueryBuilder.MakeBoundingBox(gnisRecord.Primary.Latitude, gnisRecord.Primary.Longitude, 2000);
 
-            record.FEATURE_ID = gnisRecord.FeatureId;
-            record.FEATURE_NAME = gnisRecord.FeatureName;
-            record.FEATURE_CLASS = gnisRecord.FeatureClass;
-            record.PRIM_LAT_DEC = gnisRecord.PrimaryLat;
-            record.PRIM_LONG_DEC = gnisRecord.PrimaryLon;
-            record.SOURCE_LAT_DEC = gnisRecord.SourceLat;
-            record.SOURCE_LONG_DEC = gnisRecord.SourceLon;
-            if (matchResult != null)
-            {
-                record.OSM_TYPE = matchResult.OsmFeature.GetOsmType().ToString();
-                record.OSM_ID = matchResult.OsmFeature.Id.ToString();
-                record.OSM_NAME = matchResult.OsmFeature.GetName();
-            }
-            if (overpassQuery != null)
-            {
-                record.OVERPASS_QUERY = overpassQuery;
-            }
+            string featureId = gnisRecord.FeatureId;
+            string featureName = gnisRecord.FeatureName;
+            string featureClass = gnisRecord.FeatureClass;
+            string primLatDec = gnisRecord.PrimaryLat;
+            string primLongDec = gnisRecord.PrimaryLon;
+            string sourceLatDec = gnisRecord.SourceLat;
+            string sourceLongDec = gnisRecord.SourceLon;
 
-            record.AREA_SOUTH = twoKilometerBox[0].ToString();
-            record.AREA_WEST = twoKilometerBox[1].ToString();
-            record.AREA_NORTH = twoKilometerBox[2].ToString();
-            record.AREA_EAST = twoKilometerBox[3].ToString();
-            record.MATCH_TYPES = matchResult != null ? matchResult.ToString() : string.Empty;
-            record.VALIDATION_RESULTS = validationResult != null ? validationResult.ToString() : string.Empty;
-            record.GNIS_LINK = $"=HYPERLINK(\"https://edits.nationalmap.gov/apps/gaz-domestic/public/summary/{record.FEATURE_ID}\",{record.FEATURE_ID})";
-            record.OSM_LINK = $"=HYPERLINK(\"https://www.openstreetmap.org/#map=18/{record.PRIM_LAT_DEC}/{record.PRIM_LONG_DEC}\",\"{record.PRIM_LAT_DEC}/{record.PRIM_LONG_DEC}\")";
-            if (matchResult != null)
-            {
-                record.ID_LINK = $"=HYPERLINK(\"https://www.openstreetmap.org/{matchResult.OsmFeature.GetOsmType()}/{matchResult.OsmFeature.Id}\",\"{matchResult.OsmFeature.GetOsmType()}/{matchResult.OsmFeature.Id}\")";
-            }
-            record.JOSM_AREA_LINK = $"=HYPERLINK(\"http://127.0.0.1:8111/load_and_zoom?left={record.AREA_WEST}&right={record.AREA_EAST}&top={record.AREA_NORTH}&bottom={record.AREA_SOUTH}\",\"{record.PRIM_LAT_DEC}/{record.PRIM_LONG_DEC}\")";
-            if (matchResult != null)
-            {
-                record.JOSM_OBJECT_LINK = $"=HYPERLINK(\"http://127.0.0.1:8111/load_object?newlayer=false&objects={matchResult.OsmFeature.GetOsmType().ToString().ToCharArray()[0]}{matchResult.OsmFeature.Id}\",\"{matchResult.OsmFeature.GetOsmType().ToString().ToCharArray()[0]}{matchResult.OsmFeature.Id}\")";
-            }
+            string osmType = matchResult != null ? matchResult.OsmFeature.GetOsmType().ToString() : string.Empty;
+            string osmId = matchResult != null ? matchResult.OsmFeature.Id.ToString(CultureInfo.InvariantCulture) : string.Empty;
+            string osmName = matchResult != null ? matchResult.OsmFeature.GetName() : string.Empty;
 
-            WriteOutputRecord(record);
+            string overpassQueryValue = overpassQuery ?? string.Empty;
+
+            string areaSouth = twoKilometerBox[0].ToString(CultureInfo.InvariantCulture);
+            string areaWest = twoKilometerBox[1].ToString(CultureInfo.InvariantCulture);
+            string areaNorth = twoKilometerBox[2].ToString(CultureInfo.InvariantCulture);
+            string areaEast = twoKilometerBox[3].ToString(CultureInfo.InvariantCulture);
+
+            string matchTypes = matchResult != null ? matchResult.ToString() : string.Empty;
+            string validationResults = validationResult != null ? validationResult.ToString() : string.Empty;
+
+            string gnisLink = $"=HYPERLINK(\"https://edits.nationalmap.gov/apps/gaz-domestic/public/summary/{featureId}\",{featureId})";
+            string osmLink = $"=HYPERLINK(\"https://www.openstreetmap.org/#map=18/{primLatDec}/{primLongDec}\",\"{primLatDec}/{primLongDec}\")";
+
+            string idLink = matchResult != null
+                ? $"=HYPERLINK(\"https://www.openstreetmap.org/{matchResult.OsmFeature.GetOsmType()}/{matchResult.OsmFeature.Id}\",\"{matchResult.OsmFeature.GetOsmType()}/{matchResult.OsmFeature.Id}\")"
+                : string.Empty;
+
+            string josmAreaLink = $"=HYPERLINK(\"http://127.0.0.1:8111/load_and_zoom?left={areaWest}&right={areaEast}&top={areaNorth}&bottom={areaSouth}\",\"{primLatDec}/{primLongDec}\")";
+
+            string josmObjectLink = matchResult != null
+                ? $"=HYPERLINK(\"http://127.0.0.1:8111/load_object?newlayer=false&objects={matchResult.OsmFeature.GetOsmType().ToString().ToCharArray()[0]}{matchResult.OsmFeature.Id}\",\"{matchResult.OsmFeature.GetOsmType().ToString().ToCharArray()[0]}{matchResult.OsmFeature.Id}\")"
+                : string.Empty;
+
+            string[] values =
+            [
+                featureId,
+                featureName,
+                featureClass,
+                primLatDec,
+                primLongDec,
+                sourceLatDec,
+                sourceLongDec,
+                osmType,
+                osmId,
+                osmName,
+                overpassQueryValue,
+                areaSouth,
+                areaEast,
+                areaNorth,
+                areaWest,
+                matchTypes,
+                validationResults,
+                gnisLink,
+                osmLink,
+                idLink,
+                josmAreaLink,
+                josmObjectLink,
+            ];
+
+            WriteOutputRecord(values);
+        }
+
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
 
         protected virtual void Dispose(bool disposing)
@@ -147,22 +137,26 @@
                 {
                     outputStreamWriter.Dispose();
                 }
+
                 disposedValue = true;
             }
         }
 
-        // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
-        // ~TsvOutputWriter()
-        // {
-        //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        //     Dispose(disposing: false);
-        // }
-
-        public void Dispose()
+        private void WriteOutputHeader()
         {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
+            lock (outputStreamWriterLock)
+            {
+                outputStreamWriter.WriteLine(string.Join("\t", ColumnHeaders));
+            }
+        }
+
+        private void WriteOutputRecord(string[] values)
+        {
+            lock (outputStreamWriterLock)
+            {
+                outputStreamWriter.WriteLine(string.Join("\t", values));
+                outputStreamWriter.Flush();
+            }
         }
     }
 }

@@ -1,10 +1,9 @@
-﻿using System.Xml;
-using System.Xml.Serialization;
-
-namespace Recogniser
+﻿namespace Recogniser
 {
+    using System.Xml;
+    using System.Xml.Serialization;
 
-    [Serializable()]
+    [Serializable]
     [XmlType(AnonymousType = true)]
     [XmlRoot(Namespace = "", ElementName = "osmChange", IsNullable = false)]
     internal class XOsmChange
@@ -38,7 +37,7 @@ namespace Recogniser
             return CreateSection == null && ModifySection == null;
         }
 
-        public void Create(OsmFeature osmFeature)
+        public void Create(XOsmFeature osmFeature)
         {
             lock (this)
             {
@@ -82,7 +81,7 @@ namespace Recogniser
             }
         }
 
-        public void Modify(OsmFeature osmFeature)
+        public void Modify(XOsmFeature osmFeature)
         {
             lock (this)
             {
@@ -119,10 +118,10 @@ namespace Recogniser
             StringWriter result = new();
 
             // omit the xml declaration
-            XmlWriter xmlWriter = XmlWriter.Create(result, new XmlWriterSettings { OmitXmlDeclaration = true, Indent = true });
+            using XmlWriter xmlWriter = XmlWriter.Create(result, new XmlWriterSettings { OmitXmlDeclaration = true, Indent = true });
 
             // add a blank namespace to avoid the xmlns:xsi and xmlns:xsd attributes
-            XmlSerializerNamespaces nameSpaces = new(new[] { XmlQualifiedName.Empty });
+            XmlSerializerNamespaces nameSpaces = new([XmlQualifiedName.Empty]);
 
             XmlSerializer osmChangeSerializer = new(typeof(XOsmChange));
 

@@ -10,7 +10,7 @@ namespace Recogniser
     using System.Text.RegularExpressions;
     using Recogniser.Messages;
 
-    internal partial class InstructionBuilder
+    internal sealed partial class InstructionBuilder
     {
         private static readonly string[] Numbers =
         {
@@ -216,7 +216,7 @@ namespace Recogniser
                 result.Append("\n\n");
             }
 
-            switch (validationResult.featureIdValidation)
+            switch (validationResult.FeatureIdValidation)
             {
                 case GnisFeatureIdValidation.OK:
                     break;
@@ -260,7 +260,7 @@ namespace Recogniser
                     throw new NotImplementedException();
             }
 
-            switch (validationResult.nameValidation)
+            switch (validationResult.NameValidation)
             {
                 case GnisNameValidation.OK:
                     break;
@@ -295,7 +295,7 @@ namespace Recogniser
             string defaultSecondaryTag = gnisClassData.GetGnisClassAttributes(gnisRecord.FeatureClass).DefaultSecondaryTag;
             string allDefaultTags = string.IsNullOrEmpty(defaultSecondaryTag) ? defaultPrimaryTag : $"{defaultPrimaryTag} and {defaultSecondaryTag}";
 
-            switch (validationResult.tagValidation)
+            switch (validationResult.TagValidation)
             {
                 case GnisTagValidation.OK:
                     break;
@@ -317,7 +317,7 @@ namespace Recogniser
                     throw new NotImplementedException();
             }
 
-            switch (validationResult.geometryValidation)
+            switch (validationResult.GeometryValidation)
             {
                 case GnisGeometryValidation.OK:
                 case GnisGeometryValidation.OK_REVERSED:
@@ -337,6 +337,7 @@ namespace Recogniser
                         result.Append(useJosmMessages ? FeatureGeometryMessages.Josm.ExtentOffLine : FeatureGeometryMessages.Plain.ExtentOffLine);
                         result.Append("\n\n");
                     }
+
                     break;
                 case GnisGeometryValidation.FEATURE_COORDINATE_START_SOURCE_OFF:
                 case GnisGeometryValidation.FEATURE_COORDINATE_START_PRIMARY_OFF:
@@ -345,6 +346,7 @@ namespace Recogniser
                         result.Append(useJosmMessages ? FeatureGeometryMessages.Josm.StartLocationOff : FeatureGeometryMessages.Plain.StartLocationOff);
                         result.Append("\n\n");
                     }
+
                     break;
                 case GnisGeometryValidation.FEATURE_COORDINATE_END_PRIMARY_OFF:
                 case GnisGeometryValidation.FEATURE_COORDINATE_END_SOURCE_OFF:
@@ -353,6 +355,7 @@ namespace Recogniser
                         result.Append(useJosmMessages ? FeatureGeometryMessages.Josm.EndLocationOff : FeatureGeometryMessages.Plain.EndLocationOff);
                         result.Append("\n\n");
                     }
+
                     break;
                 case GnisGeometryValidation.NOT_PROCESSED:
                     break;

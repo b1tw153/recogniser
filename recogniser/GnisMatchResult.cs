@@ -8,9 +8,9 @@ namespace Recogniser
     using System.Collections.Immutable;
     using System.Text.RegularExpressions;
 
-    internal class GnisMatchResult(OsmFeature osmFeature)
+    internal sealed class GnisMatchResult(XOsmFeature osmFeature)
     {
-        public OsmFeature OsmFeature { get; set; } = osmFeature;
+        public XOsmFeature OsmFeature { get; set; } = osmFeature;
 
         public GnisFeatureIdMatch FeatureIdMatch { get; set; } = GnisFeatureIdMatch.NOT_PROCESSED;
 

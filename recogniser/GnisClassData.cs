@@ -5,7 +5,7 @@
 
 namespace Recogniser
 {
-    internal class GnisClassData
+    internal sealed class GnisClassData
     {
         private readonly Dictionary<string, GnisClassAttributes> data = [];
 

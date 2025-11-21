@@ -1,19 +1,19 @@
 ﻿// NOTE: Generated code may require at least .NET Framework 4.5 or .NET Core/Standard 2.0.
-using GeoCoordinatePortable;
-using System.ComponentModel;
-using System.Xml.Serialization;
-
 namespace Recogniser
 {
+    using System.ComponentModel;
+    using System.Xml.Serialization;
+    using GeoCoordinatePortable;
+
     /// <remarks/>
-    [Serializable()]
+    [Serializable]
     [DesignerCategory("code")]
     [XmlType(AnonymousType = true)]
     [XmlRoot(Namespace = "", ElementName = "osm", IsNullable = false)]
     internal class XOsmData
     {
         [NonSerialized]
-        private List<OsmFeature>? _features = null;
+        private List<XOsmFeature>? _features = null;
 
         [NonSerialized]
         private readonly Dictionary<long, OsmNode> _nodeCollection = [];
@@ -52,12 +52,10 @@ namespace Recogniser
         [XmlElement("relation")]
         public List<OsmRelation> Relations { get; set; } = [];
 
-        public List<OsmFeature> GetFeatures()
+        public List<XOsmFeature> GetFeatures()
         {
-            if (_features == null)
-            {
-                _features = [.. Nodes, .. Ways, .. Relations];
-            }
+            _features ??= [.. Nodes, .. Ways, .. Relations];
+
             return _features;
         }
 
@@ -81,7 +79,6 @@ namespace Recogniser
                 //_relationCollection.Add(relation.Id, relation);
             }
         }
-
 
         public Dictionary<long, OsmNode> GetNodeCollection()
         {
@@ -144,7 +141,7 @@ namespace Recogniser
     }
 
     /// <remarks/>
-    [Serializable()]
+    [Serializable]
     [DesignerCategory("code")]
     [XmlType(AnonymousType = true)]
     internal class OsmMeta
@@ -155,20 +152,14 @@ namespace Recogniser
     }
 
     /// <remarks/>
-    [Serializable()]
+    [Serializable]
     [DesignerCategory("code")]
     [XmlType(AnonymousType = true)]
     internal class OsmTag
     {
-        /// <remarks/>
-        [XmlAttribute("k")]
-        public string Key { get; set; } = string.Empty;
-
-        /// <remarks/>
-        [XmlAttribute("v")]
-        public string Value { get; set; } = string.Empty;
-
-        public OsmTag() { }
+        public OsmTag()
+        {
+        }
 
         public OsmTag(string key, string value)
         {
@@ -188,6 +179,14 @@ namespace Recogniser
             Value = parts[1];
         }
 
+        /// <remarks/>
+        [XmlAttribute("k")]
+        public string Key { get; set; } = string.Empty;
+
+        /// <remarks/>
+        [XmlAttribute("v")]
+        public string Value { get; set; } = string.Empty;
+
         public override string ToString()
         {
             return $"{Key}={Value}";
@@ -195,7 +194,7 @@ namespace Recogniser
     }
 
     /// <remarks/>
-    [Serializable()]
+    [Serializable]
     [DesignerCategory("code")]
     [XmlType(AnonymousType = true)]
     internal class OsmBounds
@@ -218,14 +217,35 @@ namespace Recogniser
     }
 
     /// <remarks/>
-    [Serializable()]
+    [Serializable]
     [DesignerCategory("code")]
     [XmlType(AnonymousType = true)]
-    internal class OsmNode : OsmFeature
+    internal class OsmNode : XOsmFeature
     {
         private static long _temporaryId = -1;
 
         private XOsmData? _parent;
+
+        public OsmNode()
+        {
+            Id = Interlocked.Decrement(ref _temporaryId);
+        }
+
+        /*
+        public OsmNode(string lat, string lon)
+        {
+            Id = _temporaryId--;
+            Lat = double.Parse(lat);
+            Lon = double.Parse(lon);
+        }
+        */
+
+        public OsmNode(GeoCoordinate coordinate)
+        {
+            Id = Interlocked.Decrement(ref _temporaryId);
+            Lat = coordinate.Latitude;
+            Lon = coordinate.Longitude;
+        }
 
         /*
         /// <remarks/>
@@ -270,27 +290,6 @@ namespace Recogniser
         //public OsmBounds? Bounds => null;
         */
 
-        public OsmNode()
-        {
-            Id = Interlocked.Decrement(ref _temporaryId);
-        }
-
-        /*
-        public OsmNode(string lat, string lon)
-        {
-            Id = _temporaryId--;
-            Lat = double.Parse(lat);
-            Lon = double.Parse(lon);
-        }
-        */
-
-        public OsmNode(GeoCoordinate coordinate)
-        {
-            Id = Interlocked.Decrement(ref _temporaryId);
-            Lat = coordinate.Latitude;
-            Lon = coordinate.Longitude;
-        }
-
         public override FeatureType GetOsmType() => FeatureType.node;
 
         public GeoCoordinate GetCoordinate() => new(Lat, Lon);
@@ -303,17 +302,17 @@ namespace Recogniser
 
         public override OsmLinearExtent? GetLinearExtent() => null;
 
-        public override OsmFeature? AddStartNode(OsmNode startNode)
+        public override XOsmFeature? AddStartNode(OsmNode startNode)
         {
             return null;
         }
 
-        public override OsmFeature? AddEndNode(OsmNode endNode)
+        public override XOsmFeature? AddEndNode(OsmNode endNode)
         {
             return null;
         }
 
-        public override List<OsmFeature>? Reverse()
+        public override List<XOsmFeature>? Reverse()
         {
             return null;
         }
@@ -336,14 +335,19 @@ namespace Recogniser
     }
 
     /// <remarks/>
-    [Serializable()]
+    [Serializable]
     [DesignerCategory("code")]
     [XmlType(AnonymousType = true)]
-    internal class OsmWay : OsmFeature
+    internal class OsmWay : XOsmFeature
     {
         private static long _temporaryId = -1;
 
         private XOsmData? _parent;
+
+        public OsmWay()
+        {
+            Id = Interlocked.Decrement(ref _temporaryId);
+        }
 
         /// <remarks/>
         //[XmlElement("bounds")]
@@ -383,11 +387,6 @@ namespace Recogniser
         public string? User { get; set; }
         */
 
-        public OsmWay()
-        {
-            Id = Interlocked.Decrement(ref _temporaryId);
-        }
-
         public override void SetParent(XOsmData parent)
         {
             _parent = parent;
@@ -423,7 +422,7 @@ namespace Recogniser
             return new OsmLinearExtent(first.Lat, first.Lon, last.Lat, last.Lon);
         }
 
-        public override OsmFeature? AddStartNode(OsmNode startNode)
+        public override XOsmFeature? AddStartNode(OsmNode startNode)
         {
             if (_parent == null)
             {
@@ -444,7 +443,7 @@ namespace Recogniser
             return this;
         }
 
-        public override OsmFeature? AddEndNode(OsmNode endNode)
+        public override XOsmFeature? AddEndNode(OsmNode endNode)
         {
             if (_parent == null)
             {
@@ -465,7 +464,7 @@ namespace Recogniser
             return this;
         }
 
-        public override List<OsmFeature>? Reverse()
+        public override List<XOsmFeature>? Reverse()
         {
             Nodes.Reverse();
             return [this];
@@ -478,7 +477,7 @@ namespace Recogniser
     }
 
     /// <remarks/>
-    [Serializable()]
+    [Serializable]
     [DesignerCategory("code")]
     [XmlType(AnonymousType = true)]
     internal class OsmWayNode
@@ -489,16 +488,21 @@ namespace Recogniser
     }
 
     /// <remarks/>
-    [Serializable()]
+    [Serializable]
     [DesignerCategory("code")]
     [XmlType(AnonymousType = true)]
     [XmlRoot(Namespace = "", ElementName = "relation", IsNullable = false)]
-    internal class OsmRelation : OsmFeature
+    internal class OsmRelation : XOsmFeature
     {
         private static long _temporaryId = -1;
         private XOsmData? _parent;
 
         private List<OsmRelationMember>? _connectedMembers;
+
+        public OsmRelation()
+        {
+            Id = Interlocked.Decrement(ref _temporaryId);
+        }
 
         /// <remarks/>
         //public OsmBounds Bounds { get; set; }
@@ -537,11 +541,6 @@ namespace Recogniser
         public string? User { get; set; }
         */
 
-        public OsmRelation()
-        {
-            Id = Interlocked.Decrement(ref _temporaryId);
-        }
-
         public override void SetParent(XOsmData parent)
         {
             _parent = parent;
@@ -567,7 +566,7 @@ namespace Recogniser
 
         // public long Id => _id;
 
-        public override OsmFeature? AddStartNode(OsmNode startNode)
+        public override XOsmFeature? AddStartNode(OsmNode startNode)
         {
             if (_parent == null)
             {
@@ -576,13 +575,14 @@ namespace Recogniser
 
             if (_connectedMembers != null)
             {
-                OsmFeature? firstWay = _connectedMembers.First().GetOsmFeature();
+                XOsmFeature? firstWay = _connectedMembers.First().GetOsmFeature();
                 return firstWay?.AddStartNode(startNode);
             }
+
             return null;
         }
 
-        public override OsmFeature? AddEndNode(OsmNode endNode)
+        public override XOsmFeature? AddEndNode(OsmNode endNode)
         {
             if (_parent == null)
             {
@@ -594,17 +594,18 @@ namespace Recogniser
                 OsmWay lastWay = _parent.GetWayCollection()[_connectedMembers.Last().Ref];
                 return lastWay.AddEndNode(endNode);
             }
+
             return null;
         }
 
-        public override List<OsmFeature>? Reverse()
+        public override List<XOsmFeature>? Reverse()
         {
             if (_parent == null)
             {
                 throw new InvalidOperationException("Parent data set reference must not be null.");
             }
 
-            List<OsmFeature> modifiedOsmFeatures = [];
+            List<XOsmFeature> modifiedOsmFeatures = [];
 
             foreach (OsmRelationMember member in Members)
             {
@@ -701,6 +702,7 @@ namespace Recogniser
                         // restart the loop since we modified the list
                         break;
                     }
+
                     // if the end of the last ordered member matches the start of this member
                     else if (connectedLinearExtent.End.GetDistanceTo(memberExtent.Start) < 1.0)
                     {
@@ -719,6 +721,7 @@ namespace Recogniser
                         // restart the loop since we modified the list
                         break;
                     }
+
                     // if the end of the member matches the start of the first ordered member
                     else if (memberExtent.End.GetDistanceTo(connectedLinearExtent.Start) < 1.0)
                     {
@@ -754,7 +757,7 @@ namespace Recogniser
             }
         }
 
-        internal OsmFeature? GetMember(OsmRelationMember member)
+        internal XOsmFeature? GetMember(OsmRelationMember member)
         {
             if (_parent == null)
             {
@@ -779,7 +782,7 @@ namespace Recogniser
             }
         }
 
-        internal void AddMember(OsmFeature osmFeature)
+        internal void AddMember(XOsmFeature osmFeature)
         {
             if (_parent == null)
             {
@@ -813,7 +816,7 @@ namespace Recogniser
             OsmRelationMember relationMember = new()
             {
                 Type = osmFeature.GetOsmType().ToString(),
-                Ref = osmFeature.Id
+                Ref = osmFeature.Id,
             };
             relationMember.SetParent(osmFeature.GetParent());
 
@@ -822,7 +825,7 @@ namespace Recogniser
     }
 
     /// <remarks/>
-    [Serializable()]
+    [Serializable]
     [DesignerCategory("code")]
     [XmlType(AnonymousType = true)]
     internal class OsmRelationMember
@@ -863,7 +866,7 @@ namespace Recogniser
             }
         }
 
-        internal OsmFeature? GetOsmFeature()
+        internal XOsmFeature? GetOsmFeature()
         {
             if ("node".Equals(Type, StringComparison.Ordinal))
             {

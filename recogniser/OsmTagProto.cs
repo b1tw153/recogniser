@@ -1,6 +1,11 @@
-﻿namespace Recogniser
+﻿// <copyright file="OsmTagProto.cs" company="recogniser project contributors">
+// Copyright (c) 2025 recogniser project contributors.
+// Licensed under the AGPL-3.0-or-later license. See LICENSE file in the project root for full license information.
+// </copyright>
+
+namespace Recogniser
 {
-    internal class OsmTagProto
+    internal sealed class OsmTagProto
     {
         private readonly string name;
         private readonly string value;
@@ -47,6 +52,7 @@
             {
                 return Matches(tagParts[0], tagParts[1]);
             }
+
             return false;
         }
 
@@ -59,6 +65,7 @@
                     return true;
                 }
             }
+
             return false;
         }
 

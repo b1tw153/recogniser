@@ -100,11 +100,11 @@ namespace Recogniser
         MODIFIED_RELATION,
     }
 
-    internal partial class GnisMatcher(GnisClassData gnisClassData)
+    internal sealed partial class GnisMatcher(GnisClassData gnisClassData)
     {
         private const string PrimaryKey = "gnis:feature_id";
 
-        // private static readonly ConcurrentDictionary<string, string> wikidataCache = new ();
+        // private static readonly ConcurrentDictionary<string, string> WikidataCache = new ();
         private static readonly ImmutableHashSet<string> SynonymousKeys = ["gnis:id", "tiger:PLACENS", "NHD:GNIS_ID", "ref:gnis"];
 
         public static GnisMatchResult? FindBestMatch(List<GnisMatchResult> matchResults)
@@ -171,7 +171,7 @@ namespace Recogniser
 
             osmData.CollectNodesAndWays();
 
-            foreach (OsmFeature osmFeature in osmData.GetFeatures())
+            foreach (XOsmFeature osmFeature in osmData.GetFeatures())
             {
                 GnisMatchResult matchResults = MatchOsmFeature(gnisRecord, osmFeature);
 
@@ -184,7 +184,7 @@ namespace Recogniser
             return results;
         }
 
-        public GnisMatchResult MatchOsmFeature(GnisRecord gnisRecord, OsmFeature osmFeature)
+        public GnisMatchResult MatchOsmFeature(GnisRecord gnisRecord, XOsmFeature osmFeature)
         {
             GnisMatchResult result = new(osmFeature)
             {
@@ -333,7 +333,7 @@ namespace Recogniser
         [GeneratedRegex("^(.*) Census Designated Place$")]
         private static partial Regex CensusDesignatedPlaceRegex();
 
-        private static GnisNameMatch MatchGnisFeatureName(GnisRecord gnisRecord, OsmFeature osmFeature, out string nameKey)
+        private static GnisNameMatch MatchGnisFeatureName(GnisRecord gnisRecord, XOsmFeature osmFeature, out string nameKey)
         {
             OsmTagCollection tags = osmFeature.GetTagCollection();
             GnisNameMatch result /*= GnisNameMatch.NOT_PROCESSED*/;
@@ -585,7 +585,7 @@ namespace Recogniser
             return prev[n];
         }
 
-        private static GnisFeatureIdMatch MatchGnisFeatureId(GnisRecord gnisRecord, OsmFeature osmFeature, out string featureIdKey)
+        private static GnisFeatureIdMatch MatchGnisFeatureId(GnisRecord gnisRecord, XOsmFeature osmFeature, out string featureIdKey)
         {
             OsmTagCollection tags = osmFeature.GetTagCollection();
 
@@ -748,7 +748,7 @@ namespace Recogniser
             return GnisFeatureIdMatch.NO_MATCH;
         }
 
-        private GnisTagMatch MatchGnisFeatureClass(GnisRecord gnisRecord, OsmFeature osmFeature, out string primaryTagKey, out string secondaryTagKey)
+        private GnisTagMatch MatchGnisFeatureClass(GnisRecord gnisRecord, XOsmFeature osmFeature, out string primaryTagKey, out string secondaryTagKey)
         {
             GnisClassAttributes gnisClassAttributes = gnisClassData.GetGnisClassAttributes(gnisRecord.FeatureClass);
             bool primaryTagMatch = false;
@@ -812,7 +812,7 @@ namespace Recogniser
             return GnisTagMatch.NO_MATCH;
         }
 
-        private GnisConflictingTagMatch CheckForConflictingTags(GnisRecord gnisRecord, OsmFeature osmFeature, out string conflictingTag)
+        private GnisConflictingTagMatch CheckForConflictingTags(GnisRecord gnisRecord, XOsmFeature osmFeature, out string conflictingTag)
         {
             GnisClassAttributes gnisClassAttributes = gnisClassData.GetGnisClassAttributes(gnisRecord.FeatureClass);
 
@@ -847,7 +847,7 @@ namespace Recogniser
             return GnisConflictingTagMatch.NO_MATCH;
         }
 
-        private GnisGeometryMatch MatchGnisFeatureCoordinates(GnisRecord gnisRecord, OsmFeature osmFeature)
+        private GnisGeometryMatch MatchGnisFeatureCoordinates(GnisRecord gnisRecord, XOsmFeature osmFeature)
         {
             GnisClassAttributes gnisClassAttributes = gnisClassData.GetGnisClassAttributes(gnisRecord.FeatureClass);
             double startDistance;
@@ -1002,16 +1002,16 @@ namespace Recogniser
         }
 
         /*
-        private static GnisFeatureIdMatch WikidataFeatureIdMatch(GnisRecord gnisRecord, OsmFeature osmFeature)
+        private static GnisFeatureIdMatch WikidataFeatureIdMatch(GnisRecord gnisRecord, XOsmFeature osmFeature)
         {
             // if the feature in OSM has a Wikidata ID, try to use that to get the GNIS feature ID
             if (osmFeature.GetTagCollection().ContainsKey("wikidata"))
             {
-                string baseUrl = @"https://wikidata.org/w/rest.php/wikibase/v0";
+                string BaseUrl = @"https://wikidata.org/w/rest.php/wikibase/v0";
                 string? itemId = osmFeature.GetTagCollection()["wikidata"];
 
                 // check the wikidata cache first
-                if (itemId != null && wikidataCache.TryGetValue(itemId, out string? wikidataGnisIds))
+                if (itemId != null && WikidataCache.TryGetValue(itemId, out string? wikidataGnisIds))
                 {
                     foreach (string wikidataGnisId in wikidataGnisIds.Split(";"))
                     {
@@ -1023,13 +1023,13 @@ namespace Recogniser
                 }
                 else if (itemId != null)
                 {
-                    wikidataCache[itemId] = string.Empty;
+                    WikidataCache[itemId] = string.Empty;
 
                     try
                     {
                         // Request only the GNIS ID statement (P590) for efficiency
                         // see https://doc.wikimedia.org/Wikibase/master/js/rest-api/
-                        string url = $"{baseUrl}/entities/items/{itemId}/statements/P590";
+                        string url = $"{BaseUrl}/entities/items/{itemId}/statements/P590";
                         HttpRequestMessage request = new (HttpMethod.Get, url);
                         request.Headers.Add("User-Agent", Program.PrivateData.UserAgent);
                         request.Headers.Add("Authorization", Program.PrivateData.WikidataAuthorization);
@@ -1061,7 +1061,7 @@ namespace Recogniser
                                 }
                             }
 
-                            wikidataCache[itemId] = String.Join(";", ids);
+                            WikidataCache[itemId] = String.Join(";", ids);
 
                             if (match)
                             {

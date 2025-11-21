@@ -5,27 +5,26 @@
 
 namespace Recogniser
 {
-    internal class GnisValidationResult
+    internal sealed class GnisValidationResult(XOsmFeature osmFeature)
     {
-        public OsmFeature osmFeature;
-        public GnisFeatureIdValidation featureIdValidation = GnisFeatureIdValidation.NOT_PROCESSED;
-        public GnisNameValidation nameValidation = GnisNameValidation.NOT_PROCESSED;
-        public GnisTagValidation tagValidation = GnisTagValidation.NOT_PROCESSED;
-        public GnisConflictingTagValidation conflictingTagValidation = GnisConflictingTagValidation.NOT_PROCESSED;
-        public GnisGeometryValidation geometryValidation = GnisGeometryValidation.NOT_PROCESSED;
+        public XOsmFeature OsmFeature { get; set; } = osmFeature;
 
-        public GnisValidationResult(OsmFeature osmFeature)
-        {
-            this.osmFeature = osmFeature;
-        }
+        public GnisFeatureIdValidation FeatureIdValidation { get; set; } = GnisFeatureIdValidation.NOT_PROCESSED;
+
+        public GnisNameValidation NameValidation { get; set; } = GnisNameValidation.NOT_PROCESSED;
+
+        public GnisTagValidation TagValidation { get; set; } = GnisTagValidation.NOT_PROCESSED;
+
+        public GnisConflictingTagValidation ConflictingTagValidation { get; set; } = GnisConflictingTagValidation.NOT_PROCESSED;
+
+        public GnisGeometryValidation GeometryValidation { get; set; } = GnisGeometryValidation.NOT_PROCESSED;
 
         public bool AllOk =>
-            (featureIdValidation == GnisFeatureIdValidation.OK || featureIdValidation == GnisFeatureIdValidation.NOT_PROCESSED) &&
-            (nameValidation == GnisNameValidation.OK || nameValidation == GnisNameValidation.NOT_PROCESSED) &&
-            (tagValidation == GnisTagValidation.OK || tagValidation == GnisTagValidation.NOT_PROCESSED) &&
-            (conflictingTagValidation == GnisConflictingTagValidation.OK || conflictingTagValidation == GnisConflictingTagValidation.NOT_PROCESSED) &&
-            (geometryValidation == GnisGeometryValidation.OK || geometryValidation == GnisGeometryValidation.NOT_PROCESSED);
-
+            (FeatureIdValidation == GnisFeatureIdValidation.OK || FeatureIdValidation == GnisFeatureIdValidation.NOT_PROCESSED) &&
+            (NameValidation == GnisNameValidation.OK || NameValidation == GnisNameValidation.NOT_PROCESSED) &&
+            (TagValidation == GnisTagValidation.OK || TagValidation == GnisTagValidation.NOT_PROCESSED) &&
+            (ConflictingTagValidation == GnisConflictingTagValidation.OK || ConflictingTagValidation == GnisConflictingTagValidation.NOT_PROCESSED) &&
+            (GeometryValidation == GnisGeometryValidation.OK || GeometryValidation == GnisGeometryValidation.NOT_PROCESSED);
 
         public override string ToString()
         {
@@ -40,29 +39,29 @@ namespace Recogniser
                 throw new Exception("All validation should have been processed.");
             */
 
-            if (featureIdValidation != GnisFeatureIdValidation.OK && featureIdValidation != GnisFeatureIdValidation.NOT_PROCESSED)
+            if (FeatureIdValidation != GnisFeatureIdValidation.OK && FeatureIdValidation != GnisFeatureIdValidation.NOT_PROCESSED)
             {
-                result.Add(featureIdValidation.ToString());
+                result.Add(FeatureIdValidation.ToString());
             }
 
-            if (nameValidation != GnisNameValidation.OK && nameValidation != GnisNameValidation.NOT_PROCESSED)
+            if (NameValidation != GnisNameValidation.OK && NameValidation != GnisNameValidation.NOT_PROCESSED)
             {
-                result.Add(nameValidation.ToString());
+                result.Add(NameValidation.ToString());
             }
 
-            if (tagValidation != GnisTagValidation.OK && tagValidation != GnisTagValidation.NOT_PROCESSED)
+            if (TagValidation != GnisTagValidation.OK && TagValidation != GnisTagValidation.NOT_PROCESSED)
             {
-                result.Add(tagValidation.ToString());
+                result.Add(TagValidation.ToString());
             }
 
-            if (conflictingTagValidation != GnisConflictingTagValidation.OK && conflictingTagValidation != GnisConflictingTagValidation.NOT_PROCESSED)
+            if (ConflictingTagValidation != GnisConflictingTagValidation.OK && ConflictingTagValidation != GnisConflictingTagValidation.NOT_PROCESSED)
             {
-                result.Add(conflictingTagValidation.ToString());
+                result.Add(ConflictingTagValidation.ToString());
             }
 
-            if (geometryValidation != GnisGeometryValidation.OK && geometryValidation != GnisGeometryValidation.NOT_PROCESSED)
+            if (GeometryValidation != GnisGeometryValidation.OK && GeometryValidation != GnisGeometryValidation.NOT_PROCESSED)
             {
-                result.Add(geometryValidation.ToString());
+                result.Add(GeometryValidation.ToString());
             }
 
             return string.Join(";", result);

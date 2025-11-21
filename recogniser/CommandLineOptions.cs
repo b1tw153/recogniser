@@ -8,7 +8,7 @@ namespace Recogniser
     /// <summary>
     /// Configuration class to hold all command line arguments.
     /// </summary>
-    internal class CommandLineOptions
+    internal sealed class CommandLineOptions
     {
         public string? GnisFile { get; set; }
 

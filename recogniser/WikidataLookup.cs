@@ -1,14 +1,20 @@
-﻿using System.Collections.Concurrent;
-using System.Text.Json.Nodes;
+﻿// <copyright file="WikidataLookup.cs" company="recogniser project contributors">
+// Copyright (c) 2025 recogniser project contributors.
+// Licensed under the AGPL-3.0-or-later license. See LICENSE file in the project root for full license information.
+// </copyright>
 
 namespace Recogniser
 {
-    internal class WikidataLookup
-    {
-        private static readonly ConcurrentDictionary<string, string> wikidataCache = new();
-        private static readonly string baseUrl = @"https://www.wikidata.org/w/rest.php/wikibase/v1";
+    using System.Collections.Concurrent;
+    using System.Text.Json;
+    using System.Text.Json.Nodes;
 
-        public static string[] GetGnisIds(OsmFeature osmFeature)
+    internal sealed class WikidataLookup
+    {
+        private const string BaseUrl = @"https://www.wikidata.org/w/rest.php/wikibase/v1";
+        private static readonly ConcurrentDictionary<string, string> WikidataCache = new();
+
+        public static string[] GetGnisIds(XOsmFeature osmFeature)
         {
             // get the wikidata id from the feature if it has one
             string? itemId = osmFeature.GetTagCollection()["wikidata"];
@@ -21,67 +27,69 @@ namespace Recogniser
             }
 
             // if the results of a previous lookup are in our cache
-            if (wikidataCache.TryGetValue(itemId, out string? wikidataGnisIds))
+            if (WikidataCache.TryGetValue(itemId, out string? wikidataGnisIds))
             {
                 // return the cached GNIS IDs
                 return wikidataGnisIds.Split(";");
             }
 
             // we have a wikidata id and no cached results
-
             try
             {
                 // build the request url
-                string url = $"{baseUrl}/entities/items/{itemId}/statements?property=P590";
+                string url = $"{BaseUrl}/entities/items/{itemId}/statements?property=P590";
 
                 // build the http request
-                HttpRequestMessage request = new(HttpMethod.Get, url);
-                request.Headers.Add("User-Agent", Program.PrivateData.UserAgent);
-                request.Headers.Add("Authorization", Program.PrivateData.WikidataAuthorization);
-
-                // send the http request
-                HttpResponseMessage response = Program.HttpClient.Send(request);
-
-                // read the http response
-                string? content = new StreamReader(response.Content.ReadAsStream()).ReadToEnd();
-                response.EnsureSuccessStatusCode();
-
-                // parse the response data
-                JsonNode? wikidataItem = JsonNode.Parse(content);
-
-                // if we were able to parse the response data
-                if (wikidataItem != null)
+                using (HttpRequestMessage request = new(HttpMethod.Get, url))
                 {
-                    List<string> ids = [];
+                    request.Headers.Add("User-Agent", Program.PrivateData.UserAgent);
+                    request.Headers.Add("Authorization", Program.PrivateData.WikidataAuthorization);
 
-                    // get the GNIS ID statement
-                    JsonNode? wikidataGnisIdStatement = wikidataItem["P590"];
-
-                    // if there is a GNIS ID statement
-                    if (wikidataGnisIdStatement != null)
+                    // send the http request
+                    using (HttpResponseMessage response = Program.HttpClient.Send(request))
+                    using (StreamReader streamReader = new(response.Content.ReadAsStream()))
                     {
-                        // for each instance of the GNIS ID statement
-                        foreach (JsonNode? wikidataGnisIdValue in wikidataGnisIdStatement.AsArray())
+                        string? content = streamReader.ReadToEnd();
+                        response.EnsureSuccessStatusCode();
+
+                        // parse the response data
+                        JsonNode? wikidataItem = JsonNode.Parse(content);
+
+                        // if we were able to parse the response data
+                        if (wikidataItem != null)
                         {
-                            // get the GNIS ID value from the statement
-                            string? wikidataGnisId = wikidataGnisIdValue?["value"]?["content"]?.ToString();
+                            List<string> ids = [];
 
-                            // if there is a GNIS ID value for this statement
-                            if (wikidataGnisId != null)
+                            // get the GNIS ID statement
+                            JsonNode? wikidataGnisIdStatement = wikidataItem["P590"];
+
+                            // if there is a GNIS ID statement
+                            if (wikidataGnisIdStatement != null)
                             {
-                                Program.Verbose.WriteLine($"Wikidata GNIS ID: {wikidataGnisId}");
+                                // for each instance of the GNIS ID statement
+                                foreach (JsonNode? wikidataGnisIdValue in wikidataGnisIdStatement.AsArray())
+                                {
+                                    // get the GNIS ID value from the statement
+                                    string? wikidataGnisId = wikidataGnisIdValue?["value"]?["content"]?.ToString();
 
-                                // add the GNIS ID to the list
-                                ids.Add(wikidataGnisId);
+                                    // if there is a GNIS ID value for this statement
+                                    if (wikidataGnisId != null)
+                                    {
+                                        Program.Verbose.WriteLine($"Wikidata GNIS ID: {wikidataGnisId}");
+
+                                        // add the GNIS ID to the list
+                                        ids.Add(wikidataGnisId);
+                                    }
+                                }
                             }
+
+                            // cache all the results
+                            WikidataCache[itemId] = string.Join(";", ids);
+
+                            // return all the GNIS IDs
+                            return [.. ids];
                         }
                     }
-
-                    // cache all the results
-                    wikidataCache[itemId] = string.Join(";", ids);
-
-                    // return all the GNIS IDs
-                    return [.. ids];
                 }
             }
             catch (Exception e)
@@ -91,7 +99,7 @@ namespace Recogniser
             }
 
             // unable to parse the response
-            return Array.Empty<string>();
+            return [];
         }
     }
 }

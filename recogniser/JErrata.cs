@@ -7,13 +7,13 @@ namespace Recogniser
 {
     using System.Text.Json.Serialization;
 
-    internal class JErrata
+    internal sealed class JErrata
     {
         [JsonPropertyName("errata")]
         public Erratum[] Errata { get; set; } = [];
     }
 
-    internal class Erratum
+    internal sealed class Erratum
     {
         public static readonly Erratum Empty = new();
 

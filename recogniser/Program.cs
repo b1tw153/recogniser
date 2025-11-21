@@ -8,7 +8,7 @@ namespace Recogniser
     using System.CommandLine;
     using System.Text.Json;
 
-    internal class Program
+    internal sealed class Program
     {
         public const string UserAgentBaseString = "recogniser-bot/0.1";
 
@@ -233,10 +233,10 @@ namespace Recogniser
             rootCommand.SetHandler((context) =>
             {
                 RunApplication(
-                    context.ParseResult.GetValueForOption(gnisFileOption) !,
+                    context.ParseResult.GetValueForOption(gnisFileOption)!,
                     context.ParseResult.GetValueForOption(outputFileOption),
                     context.ParseResult.GetValueForOption(mapRouletteFileOption),
-                    context.ParseResult.GetValueForOption(mapRouletteTypeOption) !,
+                    context.ParseResult.GetValueForOption(mapRouletteTypeOption)!,
                     context.ParseResult.GetValueForOption(osmChangeFileOption),
                     context.ParseResult.GetValueForOption(privateDataOption),
                     context.ParseResult.GetValueForOption(gnisClassDataOption),

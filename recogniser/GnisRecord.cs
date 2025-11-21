@@ -7,7 +7,7 @@ namespace Recogniser
 {
     using GeoCoordinatePortable;
 
-    internal class GnisRecord : Dictionary<string, string>
+    internal sealed class GnisRecord : Dictionary<string, string>
     {
         private GeoCoordinate? primary;
         private GeoCoordinate? source;

@@ -5,7 +5,7 @@
 
 namespace Recogniser
 {
-    internal class GnisClassAttributes
+    internal sealed class GnisClassAttributes
     {
         private readonly HashSet<string> geometry = [];
         private readonly List<OsmTagProto> primaryTags = [];

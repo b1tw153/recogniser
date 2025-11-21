@@ -7,7 +7,7 @@ namespace Recogniser
 {
     using System.Text.Json.Serialization;
 
-    internal class JPrivateData
+    internal sealed class JPrivateData
     {
         [JsonPropertyName("user_agent")]
         public string UserAgent { get; set; } = string.Empty;

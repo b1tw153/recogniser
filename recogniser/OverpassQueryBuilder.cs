@@ -1,11 +1,18 @@
-﻿using GeoCoordinatePortable;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Xml.Serialization;
+﻿// <copyright file="OverpassQueryBuilder.cs" company="recogniser project contributors">
+// Copyright (c) 2025 recogniser project contributors.
+// Licensed under the AGPL-3.0-or-later license. See LICENSE file in the project root for full license information.
+// </copyright>
 
 namespace Recogniser
 {
-    internal partial class OverpassQueryBuilder
+    using System.Globalization;
+    using System.Text;
+    using System.Text.RegularExpressions;
+    using System.Xml;
+    using System.Xml.Serialization;
+    using GeoCoordinatePortable;
+
+    internal sealed partial class OverpassQueryBuilder
     {
         private readonly GnisClassData gnisClassData;
         private readonly XmlSerializer overpassSerializer = new(typeof(XOsmData));
@@ -15,6 +22,97 @@ namespace Recogniser
         {
             this.gnisClassData = gnisClassData;
             this.overpassUrl = overpassUrl;
+        }
+
+        public static string BuildFeatureIdQuery(GnisRecord gnisRecord)
+        {
+            // use a 20 km bounding box
+            string areaFilter = string.Join(",", MakeBoundingBox(gnisRecord.Primary.Latitude, gnisRecord.Primary.Longitude, 20000));
+
+            // find features that exactly match the feature id
+            return $"nwr[\"gnis:feature_id\"=\"{gnisRecord.FeatureId}\"]({areaFilter}); (._; >;); out meta;";
+        }
+
+        public static string BuildEnclosureQuery(GnisRecord gnisRecord)
+        {
+            return $"is_in({gnisRecord.PrimaryLat},{gnisRecord.PrimaryLon})->.a; wr(pivot.a); (._; - rel(if: abs(t[\"admin_level\"]) < 6)._;); (._; node(w);); out meta;";
+        }
+
+        public static double[] MakeBoundingBox(double lat, double lon, double width)
+        {
+            // offset from the GNIS coordinates in degrees
+            double degreeOffset = 0.01F;
+
+            // difference in meters between the length of a side of the box and the target length (2 km)
+            double error;
+
+            // coordinates of the sides of the box
+            GeoCoordinate east;
+            GeoCoordinate west;
+            GeoCoordinate north;
+            GeoCoordinate south;
+
+            // use newton's method to find the right width of the box in degrees longitude
+            do
+            {
+                // set west and east sides of the box
+                east = new GeoCoordinate(lat, lon + degreeOffset);
+                west = new GeoCoordinate(lat, lon - degreeOffset);
+
+                // calculate the width of the box
+                double distance = east.GetDistanceTo(west);
+
+                // calculate difference from target width (2 km)
+                error = distance - width;
+
+                // correct offset using newton's method
+                degreeOffset -= error * (degreeOffset / distance);
+
+                // stop when the error is less than 1 m (usually on the second iteration)
+            }
+            while (Math.Abs(error) > 1.0);
+
+            // reset the offset
+            degreeOffset = 0.01F;
+
+            // use newton's method to find the right height of the box in degrees latitude
+            do
+            {
+                // set the north and south sides of the box
+                north = new GeoCoordinate(lat + degreeOffset, lon);
+                south = new GeoCoordinate(lat - degreeOffset, lon);
+
+                // calculate the height of the box
+                double distance = north.GetDistanceTo(south);
+
+                // calculate difference from target height (2 km)
+                error = distance - width;
+
+                // correct offset using newton's method
+                degreeOffset -= error * (degreeOffset / distance);
+
+                // stop when the error is less than 1 m (usually on the second iteration)
+            }
+            while (Math.Abs(error) > 1.0);
+
+            // return the box with coordinates in the order for an Overpass bounding box
+            double[] result = { Math.Round(south.Latitude, 7), Math.Round(west.Longitude, 7), Math.Round(north.Latitude, 7), Math.Round(east.Longitude, 7) };
+            return result;
+        }
+
+        public static double[] MakeEnclosingBox(double primaryLat, double primaryLon, double sourceLat, double sourceLon)
+        {
+            double centerLat = (primaryLat + sourceLat) / 2;
+            double centerLon = (primaryLon + sourceLon) / 2;
+
+            GeoCoordinate west = new(centerLat, Math.Min(primaryLon, sourceLon));
+            GeoCoordinate east = new(centerLat, Math.Max(primaryLon, sourceLon));
+            GeoCoordinate north = new(Math.Max(primaryLat, sourceLat), centerLon);
+            GeoCoordinate south = new(Math.Min(primaryLat, sourceLat), centerLon);
+
+            double width = Math.Max(west.GetDistanceTo(east), south.GetDistanceTo(north));
+
+            return MakeBoundingBox(centerLat, centerLon, width + 100);
         }
 
         public string BuildProximityQuery(GnisRecord gnisRecord)
@@ -35,7 +133,7 @@ namespace Recogniser
             if (gnisClassAttributes.HasGeometry("point"))
             {
                 // find nodes within the box (but only nodes with tags)
-                query.Append($"node({areaFilter})(if: count_tags() > 0) -> .points; ");
+                query.Append(CultureInfo.InvariantCulture, $"node({areaFilter})(if: count_tags() > 0) -> .points; ");
 
                 // if there are conflicting tags that this feature can't have
                 if (!string.IsNullOrEmpty(gnisClassAttributes.ConflictingTags))
@@ -49,11 +147,11 @@ namespace Recogniser
                     {
                         if ("*".Equals(conflictingTag.Value, StringComparison.Ordinal))
                         {
-                            conflictingTagBuilder.Append($"(.points; - node[\"{conflictingTag.Name}\"].points;) -> .points; ");
+                            conflictingTagBuilder.Append(CultureInfo.InvariantCulture, $"(.points; - node[\"{conflictingTag.Name}\"].points;) -> .points; ");
                         }
                         else
                         {
-                            conflictingTagBuilder.Append($"(.points; - node[\"{conflictingTag.Name}\"=\"{conflictingTag.Value}\"].points;) -> .points; ");
+                            conflictingTagBuilder.Append(CultureInfo.InvariantCulture, $"(.points; - node[\"{conflictingTag.Name}\"=\"{conflictingTag.Value}\"].points;) -> .points; ");
                         }
                     }
 
@@ -65,7 +163,7 @@ namespace Recogniser
             if (gnisClassAttributes.HasGeometry("line") || gnisClassAttributes.HasGeometry("area"))
             {
                 // find ways within the box
-                query.Append($"way({areaFilter}) -> .lines; ");
+                query.Append(CultureInfo.InvariantCulture, $"way({areaFilter}) -> .lines; ");
 
                 // if we want to include relations in the results
                 if (!string.IsNullOrEmpty(gnisClassAttributes.RelationTypes))
@@ -80,22 +178,24 @@ namespace Recogniser
                     // drop big admin boundaries
                     query.Append($"(.lines; - rel(if: abs(t[\"admin_level\"]) < 6).lines;) -> .lines; ");
                 }
+
                 // if the feature can be mapped using more than one type of relation
-                else if (gnisClassAttributes.RelationTypes.Contains('|'))
+                else if (gnisClassAttributes.RelationTypes.Contains('|', StringComparison.Ordinal))
                 {
                     // drop relations that don't have the required tags
-                    query.Append($"(.lines; - rel[type!~\"{gnisClassAttributes.RelationTypes}\"].lines;) -> .lines; ");
+                    query.Append(CultureInfo.InvariantCulture, $"(.lines; - rel[type!~\"{gnisClassAttributes.RelationTypes}\"].lines;) -> .lines; ");
                 }
+
                 // if the feature can be mapped as only one type of relation
                 // i.e. RelationTypes is not wildcard or empty string and isn't pipe delimited
                 else if (!string.IsNullOrEmpty(gnisClassAttributes.RelationTypes))
                 {
                     // drop relations that don't have the exact tag
-                    query.Append($"(.lines; - rel[type!=\"{gnisClassAttributes.RelationTypes}\"].lines;) -> .lines; ");
+                    query.Append(CultureInfo.InvariantCulture, $"(.lines; - rel[type!=\"{gnisClassAttributes.RelationTypes}\"].lines;) -> .lines; ");
                 }
 
                 // filter out big boundaries if they might be in the results
-                if (gnisClassAttributes.RelationTypes.Contains("boundary"))
+                if (gnisClassAttributes.RelationTypes.Contains("boundary", StringComparison.Ordinal))
                 {
                     // filter out irrelevant boundaries and boundaries at county level or larger
                     query.Append("(.lines; - rel[boundary~\"region|timezone|fire_district|collection\"].lines;) -> .lines; (.lines; - rel(if: abs(t[\"admin_level\"]) < 7).lines;) -> .lines; ");
@@ -113,11 +213,11 @@ namespace Recogniser
                     {
                         if ("*".Equals(conflictingTag.Value, StringComparison.Ordinal))
                         {
-                            conflictingTagBuilder.Append($"(.lines; - wr[\"{conflictingTag.Name}\"].lines;) -> .lines; ");
+                            conflictingTagBuilder.Append(CultureInfo.InvariantCulture, $"(.lines; - wr[\"{conflictingTag.Name}\"].lines;) -> .lines; ");
                         }
                         else
                         {
-                            conflictingTagBuilder.Append($"(.lines; - wr[\"{conflictingTag.Name}\"=\"{conflictingTag.Value}\"].lines;) -> .lines; ");
+                            conflictingTagBuilder.Append(CultureInfo.InvariantCulture, $"(.lines; - wr[\"{conflictingTag.Name}\"=\"{conflictingTag.Value}\"].lines;) -> .lines; ");
                         }
                     }
 
@@ -135,15 +235,6 @@ namespace Recogniser
             query.Append("out meta;");
 
             return query.ToString();
-        }
-
-        public static string BuildFeatureIdQuery(GnisRecord gnisRecord)
-        {
-            // use a 20 km bounding box
-            string areaFilter = string.Join(",", MakeBoundingBox(gnisRecord.Primary.Latitude, gnisRecord.Primary.Longitude, 20000));
-
-            // find features that exactly match the feature id
-            return $"nwr[\"gnis:feature_id\"=\"{gnisRecord.FeatureId}\"]({areaFilter}); (._; >;); out meta;";
         }
 
         public string BuildNameAndTagQuery(GnisRecord gnisRecord)
@@ -171,13 +262,12 @@ namespace Recogniser
                 areaFilter = string.Join(",", MakeBoundingBox(centerLat, centerLon, distance));
                 */
                 areaFilter = string.Join(",", MakeEnclosingBox(gnisRecord.Primary.Latitude, gnisRecord.Primary.Longitude, gnisRecord.Source.Latitude, gnisRecord.Source.Longitude));
-
             }
 
             query.Append("( ");
 
             // escape quotes in the feature name
-            string escapedFeatureName = gnisRecord.FeatureName.Contains('"')
+            string escapedFeatureName = gnisRecord.FeatureName.Contains('"', StringComparison.Ordinal)
                 ? EmbeddedQuoteRegex().Replace(gnisRecord.FeatureName, "\\\"")
                 : gnisRecord.FeatureName;
 
@@ -188,12 +278,12 @@ namespace Recogniser
                 if ("*".Equals(tag.Value, StringComparison.Ordinal))
                 {
                     // find all features with the name and tag key
-                    query.Append($"nwr[\"{tag.Name}\"][\"name\"=\"{escapedFeatureName}\"]({areaFilter}); ");
+                    query.Append(CultureInfo.InvariantCulture, $"nwr[\"{tag.Name}\"][\"name\"=\"{escapedFeatureName}\"]({areaFilter}); ");
                 }
                 else
                 {
                     // find all features where the name and specific tag value
-                    query.Append($"nwr[\"{tag.Name}\"=\"{tag.Value}\"][\"name\"=\"{escapedFeatureName}\"]({areaFilter}); ");
+                    query.Append(CultureInfo.InvariantCulture, $"nwr[\"{tag.Name}\"=\"{tag.Value}\"][\"name\"=\"{escapedFeatureName}\"]({areaFilter}); ");
                 }
             }
 
@@ -201,14 +291,6 @@ namespace Recogniser
 
             return query.ToString();
         }
-
-        public static string BuildEnclosureQuery(GnisRecord gnisRecord)
-        {
-            return $"is_in({gnisRecord.PrimaryLat},{gnisRecord.PrimaryLon})->.a; wr(pivot.a); (._; - rel(if: abs(t[\"admin_level\"]) < 6)._;); (._; node(w);); out meta;";
-        }
-
-        [GeneratedRegex("\"")]
-        private static partial Regex EmbeddedQuoteRegex();
 
         public string BuildSecondQuery(GnisRecord gnisRecord)
         {
@@ -250,11 +332,11 @@ namespace Recogniser
             }
 
             // get everything in the area
-            query.Append($"[bbox:{areaFilter}];");
+            query.Append(CultureInfo.InvariantCulture, $"[bbox:{areaFilter}];");
 
             // look for anything with the correct Feature ID
             query.Append("( ");
-            query.Append($"{osmTypes}[\"gnis:feature_id\"][\"gnis:feature_id\"~\".*{gnisRecord.FeatureId}.*\"]; ");
+            query.Append(CultureInfo.InvariantCulture, $"{osmTypes}[\"gnis:feature_id\"][\"gnis:feature_id\"~\".*{gnisRecord.FeatureId}.*\"]; ");
             /*
             // no longer needed after August 2023
             query.Append($"{osmTypes}[\"gnis:id\"][\"gnis:id\"~\".*{gnisRecord.FeatureId}.*\"]; ");
@@ -264,7 +346,7 @@ namespace Recogniser
             */
 
             // escape quotes in the feature name
-            string escapedFeatureName = gnisRecord.FeatureName.Contains('"')
+            string escapedFeatureName = gnisRecord.FeatureName.Contains('"', StringComparison.Ordinal)
                 ? EmbeddedQuoteRegex().Replace(gnisRecord.FeatureName, "\\\"")
                 : gnisRecord.FeatureName;
 
@@ -275,12 +357,12 @@ namespace Recogniser
                 if ("*".Equals(tag.Value, StringComparison.Ordinal))
                 {
                     // find all features with the name and tag key
-                    query.Append($"{osmTypes}[\"{tag.Name}\"][\"name\"=\"{escapedFeatureName}\"]; ");
+                    query.Append(CultureInfo.InvariantCulture, $"{osmTypes}[\"{tag.Name}\"][\"name\"=\"{escapedFeatureName}\"]; ");
                 }
                 else
                 {
                     // find all features where the name and specific tag value
-                    query.Append($"{osmTypes}[\"{tag.Name}\"=\"{tag.Value}\"][\"name\"=\"{escapedFeatureName}\"]; ");
+                    query.Append(CultureInfo.InvariantCulture, $"{osmTypes}[\"{tag.Name}\"=\"{tag.Value}\"][\"name\"=\"{escapedFeatureName}\"]; ");
                 }
             }
 
@@ -292,11 +374,11 @@ namespace Recogniser
                 // if the feature can be a relation
                 if (!string.IsNullOrEmpty(gnisClassAttributes.RelationTypes))
                 {
-                    query.Append($"is_in({gnisRecord.PrimaryLat},{gnisRecord.PrimaryLon})->.a; wr(pivot.a) -> .areas; (.areas; - rel(if: abs(t[\"admin_level\"]) < 6).areas;) -> .areas; ");
+                    query.Append(CultureInfo.InvariantCulture, $"is_in({gnisRecord.PrimaryLat},{gnisRecord.PrimaryLon})->.a; wr(pivot.a) -> .areas; (.areas; - rel(if: abs(t[\"admin_level\"]) < 6).areas;) -> .areas; ");
                 }
                 else
                 {
-                    query.Append($"is_in({gnisRecord.PrimaryLat},{gnisRecord.PrimaryLon})->.a; way(pivot.a) -> .areas; ");
+                    query.Append(CultureInfo.InvariantCulture, $"is_in({gnisRecord.PrimaryLat},{gnisRecord.PrimaryLon})->.a; way(pivot.a) -> .areas; ");
                 }
             }
 
@@ -305,84 +387,10 @@ namespace Recogniser
             return query.ToString();
         }
 
-        public static double[] MakeBoundingBox(double lat, double lon, double width)
-        {
-            // offset from the GNIS coordinates in degrees
-            double degreeOffset = 0.01F;
-
-            // difference in meters between the length of a side of the box and the target length (2 km)
-            double error;
-
-            // coordinates of the sides of the box
-            GeoCoordinate east;
-            GeoCoordinate west;
-            GeoCoordinate north;
-            GeoCoordinate south;
-
-            // use newton's method to find the right width of the box in degrees longitude
-            do
-            {
-                // set west and east sides of the box
-                east = new GeoCoordinate(lat, lon + degreeOffset);
-                west = new GeoCoordinate(lat, lon - degreeOffset);
-
-                // calculate the width of the box
-                double distance = east.GetDistanceTo(west);
-
-                // calculate difference from target width (2 km)
-                error = distance - width;
-
-                // correct offset using newton's method
-                degreeOffset -= error * (degreeOffset / distance);
-
-                // stop when the error is less than 1 m (usually on the second iteration)
-            } while (Math.Abs(error) > 1.0);
-
-            // reset the offset
-            degreeOffset = 0.01F;
-
-            // use newton's method to find the right height of the box in degrees latitude
-            do
-            {
-                // set the north and south sides of the box
-                north = new GeoCoordinate(lat + degreeOffset, lon);
-                south = new GeoCoordinate(lat - degreeOffset, lon);
-
-                // calculate the height of the box
-                double distance = north.GetDistanceTo(south);
-
-                // calculate difference from target height (2 km)
-                error = distance - width;
-
-                // correct offset using newton's method
-                degreeOffset -= error * (degreeOffset / distance);
-
-                // stop when the error is less than 1 m (usually on the second iteration)
-            } while (Math.Abs(error) > 1.0);
-
-            // return the box with coordinates in the order for an Overpass bounding box
-            double[] result = { Math.Round(south.Latitude, 7), Math.Round(west.Longitude, 7), Math.Round(north.Latitude, 7), Math.Round(east.Longitude, 7) };
-            return result;
-        }
-
-        public static double[] MakeEnclosingBox(double primaryLat, double primaryLon, double sourceLat, double sourceLon)
-        {
-            double centerLat = (primaryLat + sourceLat) / 2;
-            double centerLon = (primaryLon + sourceLon) / 2;
-
-            GeoCoordinate west = new(centerLat, Math.Min(primaryLon, sourceLon));
-            GeoCoordinate east = new(centerLat, Math.Max(primaryLon, sourceLon));
-            GeoCoordinate north = new(Math.Max(primaryLat, sourceLat), centerLon);
-            GeoCoordinate south = new(Math.Min(primaryLat, sourceLat), centerLon);
-
-            double width = Math.Max(west.GetDistanceTo(east), south.GetDistanceTo(north));
-
-            return MakeBoundingBox(centerLat, centerLon, width + 100);
-        }
-
         public XOsmData? SendQuery(string overpassQuery)
         {
             MemoryStream memoryStream = new();
+            Exception? lastException = null;
 
             // sometimes Overpass balks under heavy load
             // use an exponential fallback and retry
@@ -391,51 +399,74 @@ namespace Recogniser
                 try
                 {
                     // set up the request
-                    HttpRequestMessage request = new(HttpMethod.Post, overpassUrl);
-                    request.Headers.Add("User-Agent", Program.PrivateData.UserAgent);
-                    request.Content = new StringContent(overpassQuery);
+                    using (HttpRequestMessage request = new(HttpMethod.Post, overpassUrl))
+                    {
+                        request.Headers.Add("User-Agent", Program.PrivateData.UserAgent);
+                        request.Content = new StringContent(overpassQuery);
 
-                    // send the query
-                    HttpResponseMessage response = Program.HttpClient.Send(request);
+                        // send the query
+                        using (HttpResponseMessage response = Program.HttpClient.Send(request))
+                        {
+                            // make sure the response is not an error
+                            response.EnsureSuccessStatusCode();
 
-                    // make sure the response is not an error
-                    response.EnsureSuccessStatusCode();
+                            // copy to a memory stream so that we can re-read the response if needed
+                            response.Content.ReadAsStream().CopyTo(memoryStream);
+                            memoryStream.Position = 0;
 
-                    // copy to a memory stream so that we can re-read the response if needed
-                    response.Content.ReadAsStream().CopyTo(memoryStream);
-                    memoryStream.Position = 0;
-
-                    // return the deserialized XML
-                    return overpassSerializer.Deserialize(memoryStream) as XOsmData;
+                            // return the deserialized XML
+                            using (XmlReader reader = XmlReader.Create(memoryStream, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null }))
+                            {
+                                return overpassSerializer.Deserialize(reader) as XOsmData;
+                            }
+                        }
+                    }
                 }
-                catch (Exception e)
+                catch (HttpRequestException e)
                 {
+                    lastException = e;
+                    Console.Error.WriteLine(e);
+                    Thread.Sleep((int)Math.Pow(2, i));
+                    Console.Error.WriteLine($"Retry {i + 1}: {overpassQuery}");
+                }
+                catch (InvalidOperationException e)
+                {
+                    lastException = e;
                     Console.Error.WriteLine(e);
                     memoryStream.Position = 0;
-                    Console.Error.WriteLine($"Response: {new StreamReader(memoryStream).ReadToEnd()}");
+                    using (StreamReader streamReader = new(memoryStream))
+                    {
+                        Console.Error.WriteLine($"Response: {streamReader.ReadToEnd()}");
+                    }
+
                     Thread.Sleep((int)Math.Pow(2, i));
                     Console.Error.WriteLine($"Retry {i + 1}: {overpassQuery}");
                 }
             }
 
-            throw new HttpRequestException("Unable to get a response from Overpass.");
+            throw new HttpRequestException("Unable to get a response from Overpass.", lastException);
         }
 
         public async Task<XOsmData?> SendQueryAsync(string overpassQuery)
         {
             // set up the request
-            HttpRequestMessage request = new(HttpMethod.Post, overpassUrl);
-            request.Headers.Add("User-Agent", Program.PrivateData.UserAgent);
-            request.Content = new StringContent(overpassQuery);
+            using (HttpRequestMessage request = new(HttpMethod.Post, overpassUrl))
+            {
+                request.Headers.Add("User-Agent", Program.PrivateData.UserAgent);
+                request.Content = new StringContent(overpassQuery);
 
-            // send the query
-            Task<HttpResponseMessage> responseTask = Program.HttpClient.SendAsync(request);
+                // send the query
+                using (HttpResponseMessage response = await Program.HttpClient.SendAsync(request).ConfigureAwait(false))
+                {
+                    response.EnsureSuccessStatusCode();
 
-            HttpResponseMessage response = await responseTask;
-
-            response.EnsureSuccessStatusCode();
-
-            return overpassSerializer.Deserialize(response.Content.ReadAsStream()) as XOsmData;
+                    using (Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                    using (XmlReader reader = XmlReader.Create(stream, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null }))
+                    {
+                        return overpassSerializer.Deserialize(reader) as XOsmData;
+                    }
+                }
+            }
         }
 
         internal static string BuildObjectQuery(string type, long id)
@@ -457,5 +488,8 @@ namespace Recogniser
 
             throw new ArgumentException($"Unknown type: {type}");
         }
+
+        [GeneratedRegex("\"")]
+        private static partial Regex EmbeddedQuoteRegex();
     }
 }

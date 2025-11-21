@@ -1,34 +1,36 @@
-﻿using System.Collections.Concurrent;
+﻿// <copyright file="PerformanceTimer.cs" company="recogniser project contributors">
+// Copyright (c) 2025 recogniser project contributors.
+// Licensed under the AGPL-3.0-or-later license. See LICENSE file in the project root for full license information.
+// </copyright>
 
 namespace Recogniser
 {
-    internal class PerformanceTimer
+    using System.Collections.Concurrent;
+
+    internal sealed class PerformanceTimer
     {
-        private readonly string _name;
-        private readonly ConcurrentDictionary<long, long> _startEvents = new();
-        private readonly ConcurrentDictionary<long, long> _stopEvents = new();
+        private readonly string name;
+        private readonly ConcurrentDictionary<long, long> startEvents = new();
+        private readonly ConcurrentDictionary<long, long> stopEvents = new();
 
         public PerformanceTimer(string name)
         {
-            _name = name;
+            this.name = name;
         }
 
         public void Start(long id)
         {
-            _startEvents[id] = DateTime.Now.Ticks;
+            startEvents[id] = DateTime.Now.Ticks;
         }
 
         public void Stop(long id)
         {
-            _stopEvents[id] = DateTime.Now.Ticks;
+            stopEvents[id] = DateTime.Now.Ticks;
         }
 
         public void Cancel(long id)
         {
-            if (_startEvents.ContainsKey(id))
-            {
-                _startEvents.Remove(id, out _);
-            }
+            startEvents.Remove(id, out _);
         }
 
         public string GetSummary()
@@ -39,12 +41,12 @@ namespace Recogniser
             long sum = 0;
             long count = 0;
 
-            foreach (long id in _startEvents.Keys)
+            foreach (long id in startEvents.Keys)
             {
-                long startTicks = _startEvents[id];
+                long startTicks = startEvents[id];
                 long milliseconds = -1;
 
-                if (_stopEvents.TryGetValue(id, out long stopTicks))
+                if (stopEvents.TryGetValue(id, out long stopTicks))
                 {
                     milliseconds = (stopTicks - startTicks) / TimeSpan.TicksPerMillisecond;
                     sum += milliseconds;
@@ -60,7 +62,6 @@ namespace Recogniser
                         max = milliseconds;
                     }
                 }
-
             }
 
             if (count > 0)
@@ -72,7 +73,7 @@ namespace Recogniser
                 min = max = ave = 0;
             }
 
-            return $"{_name}\t{min / 1000.0}\t{max / 1000.0}\t{ave / 1000.0}\t{sum / 1000.0}\t{count}";
+            return $"{name}\t{min / 1000.0}\t{max / 1000.0}\t{ave / 1000.0}\t{sum / 1000.0}\t{count}";
         }
     }
 }

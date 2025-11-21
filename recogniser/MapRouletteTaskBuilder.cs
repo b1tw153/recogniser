@@ -8,7 +8,7 @@ namespace Recogniser
     using System.Globalization;
     using System.Text.Json;
 
-    internal class MapRouletteTaskBuilder
+    internal sealed class MapRouletteTaskBuilder
     {
         private readonly InstructionBuilder instructionBuilder;
 
@@ -20,10 +20,10 @@ namespace Recogniser
         /// <summary>
         /// Build a MapRoulette task for a collection of OSM features that match the GNIS record.
         /// </summary>
-        /// <param name="gnisRecord"></param>
-        /// <param name="matchResults"></param>
-        /// <param name="validationResults"></param>
-        /// <returns></returns>
+        /// <param name="gnisRecord">The GNIS record.</param>
+        /// <param name="matchResults">The matching resultes.</param>
+        /// <param name="validationResults">The validation results.</param>
+        /// <returns>A MapRoulette task modify the OSM features.</returns>
         public string BuildPlainMapRouletteTask(GnisRecord gnisRecord, List<GnisMatchResult> matchResults, List<GnisValidationResult> validationResults)
         {
             JMapRouletteGeoJson task = new();
@@ -50,10 +50,10 @@ namespace Recogniser
         /// <summary>
         /// Build a plain MapRoulette task for a single OSM feature that matched the GNIS record.
         /// </summary>
-        /// <param name="gnisRecord"></param>
-        /// <param name="matchResult"></param>
-        /// <param name="validationResult"></param>
-        /// <returns></returns>
+        /// <param name="gnisRecord">The GNIS record.</param>
+        /// <param name="matchResult">The matching result.</param>
+        /// <param name="validationResult">The validation result.</param>
+        /// <returns>A MapRoulette task to modify the OSM feature.</returns>
         public string BuildPlainMapRouletteTask(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult)
         {
             JMapRouletteGeoJson task = new();
@@ -70,11 +70,11 @@ namespace Recogniser
         /// <summary>
         /// Build a collaborative MapRoulette task for a single OSM feature that matched a GNIS record.
         /// </summary>
-        /// <param name="gnisRecord"></param>
-        /// <param name="matchResult"></param>
-        /// <param name="validationResult"></param>
-        /// <param name="osmChangeXml"></param>
-        /// <returns></returns>
+        /// <param name="gnisRecord">The GNIS record.</param>
+        /// <param name="matchResult">The matching result.</param>
+        /// <param name="validationResult">The validation result.</param>
+        /// <param name="osmChangeXml">The OsmChange XML to modify or create the OSM feature.</param>
+        /// <returns>A MapRoulette task to modify or create the OSM feature.</returns>
         public string BuildCollaborativeMapRouletteTask(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult, string? osmChangeXml)
         {
             // build an OSC task to modify an existing OSM feature
@@ -119,9 +119,8 @@ namespace Recogniser
         /// <summary>
         /// Build a plain MapRoulette where there was no OSM feature that matched the GNIS record.
         /// </summary>
-        /// <param name="gnisRecord"></param>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
+        /// <param name="gnisRecord">The GNIS record.</param>
+        /// <returns>A MapRoulette task to create a corresponding OSM feature.</returns>
         internal string BuildPlainMapRouletteTask(GnisRecord gnisRecord)
         {
             JMapRouletteGeoJson task = new();
@@ -138,9 +137,9 @@ namespace Recogniser
         /// <summary>
         /// Build a collaborative MapRoulette task where there was no OSM feature that matched the GNIS record.
         /// </summary>
-        /// <param name="gnisRecord"></param>
-        /// <param name="osmChangeXml"></param>
-        /// <returns></returns>
+        /// <param name="gnisRecord">the GNIS record.</param>
+        /// <param name="osmChangeXml">The OsmChange XML to create a corresponding feature.</param>
+        /// <returns>A collaborative MapRoulette task to create the corresponding OSM feature.</returns>
         internal string BuildCollaborativeMapRouletteTask(GnisRecord gnisRecord, string? osmChangeXml)
         {
             // build an OSC task to add a feature that didn't exist before
@@ -169,11 +168,11 @@ namespace Recogniser
         /// <summary>
         /// Build a Tag Fix MapRoulette task for a single OSM feature that matched a GNIS record.
         /// </summary>
-        /// <param name="gnisRecord"></param>
-        /// <param name="matchResult"></param>
-        /// <param name="validationResult"></param>
-        /// <param name="operations"></param>
-        /// <returns></returns>
+        /// <param name="gnisRecord">The GNIS record.</param>
+        /// <param name="matchResult">The matching result.</param>
+        /// <param name="validationResult">The validation result.</param>
+        /// <param name="operations">The list of tag changes.</param>
+        /// <returns>A Tag Fix MapRoulette task to apply the tag changes to the OSM feature.</returns>
         internal string BuildTagFixMapRouletteTask(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult, List<TagFixOperation> operations)
         {
             // build a Tag Fix task to modify an existing OSM feature
@@ -226,7 +225,7 @@ namespace Recogniser
             return feature;
         }
 
-        private static GeoJsonFeature ConvertToGeoJsonFeature(OsmFeature osmFeature, GnisRecord gnisRecord)
+        private static GeoJsonFeature ConvertToGeoJsonFeature(XOsmFeature osmFeature, GnisRecord gnisRecord)
         {
             GeoJsonFeature feature = new();
 
@@ -276,7 +275,7 @@ namespace Recogniser
 
                 foreach (OsmRelationMember relationMember in relation.Members)
                 {
-                    OsmFeature? member = relation.GetMember(relationMember);
+                    XOsmFeature? member = relation.GetMember(relationMember);
 
                     if (member is OsmNode memberNode)
                     {

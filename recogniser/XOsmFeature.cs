@@ -1,22 +1,32 @@
-﻿using GeoCoordinatePortable;
-using System.ComponentModel;
-using System.Xml.Serialization;
+﻿// <copyright file="XOsmFeature.cs" company="recogniser project contributors">
+// Copyright (c) 2025 recogniser project contributors.
+// Licensed under the AGPL-3.0-or-later license. See LICENSE file in the project root for full license information.
+// </copyright>
 
 namespace Recogniser
 {
-    [Serializable()]
+    using System.ComponentModel;
+    using System.Xml.Serialization;
+    using GeoCoordinatePortable;
+
+    [Serializable]
     [DesignerCategory("code")]
     [XmlType(AnonymousType = true)]
-    internal abstract class OsmFeature
+    internal abstract class XOsmFeature
     {
+        private OsmTagCollection? _tagCollection;
+
+        public XOsmFeature()
+        {
+            Timestamp = DateTime.Now;
+        }
+
         internal enum FeatureType
         {
             node,
             way,
-            relation
+            relation,
         }
-
-        private OsmTagCollection? _tagCollection;
 
         /// <remarks/>
         [XmlElement("tag")]
@@ -45,11 +55,6 @@ namespace Recogniser
         /// <remarks/>
         [XmlAttribute("user")]
         public string? User { get; set; }
-
-        public OsmFeature()
-        {
-            Timestamp = DateTime.Now;
-        }
 
         public abstract FeatureType GetOsmType();
 
@@ -97,16 +102,15 @@ namespace Recogniser
             }
         }
 
-        public abstract OsmFeature? AddStartNode(OsmNode startNode);
+        public abstract XOsmFeature? AddStartNode(OsmNode startNode);
 
-        public abstract OsmFeature? AddEndNode(OsmNode endNode);
+        public abstract XOsmFeature? AddEndNode(OsmNode endNode);
 
-        public abstract List<OsmFeature>? Reverse();
+        public abstract List<XOsmFeature>? Reverse();
 
         public abstract void SetParent(XOsmData osmData);
 
         public abstract XOsmData GetParent();
-
     }
 
     internal class OsmLinearExtent
@@ -127,6 +131,7 @@ namespace Recogniser
         }
 
         public GeoCoordinate Start { get { return _start; } }
+
         public GeoCoordinate End { get { return _end; } }
     }
 }

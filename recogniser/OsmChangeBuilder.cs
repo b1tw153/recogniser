@@ -7,7 +7,7 @@ namespace Recogniser
 {
     using System.Globalization;
 
-    internal class OsmChangeBuilder
+    internal sealed class OsmChangeBuilder
     {
         private readonly GnisClassData gnisClassData;
 
@@ -19,10 +19,10 @@ namespace Recogniser
         /// <summary>
         /// Build an OsmChange XML string for a single matched OSM feature.
         /// </summary>
-        /// <param name="gnisRecord"></param>
-        /// <param name="matchResult"></param>
-        /// <param name="validationResult"></param>
-        /// <returns></returns>
+        /// <param name="gnisRecord">The GNIS record.</param>
+        /// <param name="matchResult">The matching result.</param>
+        /// <param name="validationResult">The validation result.</param>
+        /// <returns>The OsmChange XML to modify the feature.</returns>
         public string? BuildOsmChange(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult)
         {
             XOsmChange osmChange = new();
@@ -34,7 +34,7 @@ namespace Recogniser
 
         public void AddToOsmChange(XOsmChange osmChange, GnisRecord gnisRecord)
         {
-            List<OsmFeature> newOsmFeatures = [];
+            List<XOsmFeature> newOsmFeatures = [];
 
             // don't build OsmChange XML for unmatched Civil or Census classes because they can't be mapped as points and we don't have the boundary polygons
             //if ("Civil".Equals(gnisRecord.FeatureClass) || "Census".Equals(gnisRecord.FeatureClass))
@@ -69,7 +69,7 @@ namespace Recogniser
                 AddEndNode(endNode, newWay, newOsmFeatures, newOsmFeatures);
             }
 
-            foreach (OsmFeature newFeature in newOsmFeatures)
+            foreach (XOsmFeature newFeature in newOsmFeatures)
             {
                 osmChange.Create(newFeature);
             }
@@ -79,8 +79,8 @@ namespace Recogniser
         {
             bool modified = false;
             bool created = false;
-            List<OsmFeature> newOsmFeatures = [];
-            List<OsmFeature> modifiedOsmFeatures = [];
+            List<XOsmFeature> newOsmFeatures = [];
+            List<XOsmFeature> modifiedOsmFeatures = [];
 
             // don't modify the feature if there was a conflicting match
             if (matchResult.MatchType == GnisMatchType.ConflictingMatch)
@@ -115,14 +115,14 @@ namespace Recogniser
                     osmChange.Modify(matchResult.OsmFeature);
                 }
 
-                foreach (OsmFeature newFeature in newOsmFeatures)
+                foreach (XOsmFeature newFeature in newOsmFeatures)
                 {
                     osmChange.Create(newFeature);
                 }
 
                 // this is ok even if the modified feature is the same as the original feature
                 // because the OsmChange method enforces uniqueness
-                foreach (OsmFeature modifiedFeature in modifiedOsmFeatures)
+                foreach (XOsmFeature modifiedFeature in modifiedOsmFeatures)
                 {
                     osmChange.Modify(modifiedFeature);
                 }
@@ -132,8 +132,8 @@ namespace Recogniser
         /// <summary>
         /// Build an OsmChange XML string to create a new feature based on a GNIS record.
         /// </summary>
-        /// <param name="gnisRecord"></param>
-        /// <returns></returns>
+        /// <param name="gnisRecord">The GNIS record.</param>
+        /// <returns>The OsmChange XML to create the feature.</returns>
         internal string? BuildOsmChange(GnisRecord gnisRecord)
         {
             XOsmChange osmChange = new();
@@ -143,7 +143,7 @@ namespace Recogniser
             return osmChange.IsEmpty() ? null : osmChange.Serialize();
         }
 
-        private static void DeleteExtraGnisTags(OsmFeature osmFeature)
+        private static void DeleteExtraGnisTags(XOsmFeature osmFeature)
         {
             OsmTagCollection tags = osmFeature.GetTagCollection();
 
@@ -156,7 +156,7 @@ namespace Recogniser
             }
         }
 
-        private static bool ModifyGeometry(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult, List<OsmFeature> newOsmFeatures, List<OsmFeature> modifiedOsmFeatures)
+        private static bool ModifyGeometry(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult, List<XOsmFeature> newOsmFeatures, List<XOsmFeature> modifiedOsmFeatures)
         {
             bool modified = false;
 
@@ -181,7 +181,7 @@ namespace Recogniser
             // note that this method can add duplicate features to modifiedOsmFeatures
             // this is ok because the OsmChange methods enforce uniqueness
 
-            switch (validationResult.geometryValidation)
+            switch (validationResult.GeometryValidation)
             {
                 case GnisGeometryValidation.OK:
                 case GnisGeometryValidation.OK_REVERSED:
@@ -332,13 +332,13 @@ namespace Recogniser
             }
         }
 
-        private static bool AddStartNode(OsmNode? startNode, OsmFeature osmFeature, List<OsmFeature> newOsmFeatures, List<OsmFeature> modifiedOsmFeatures)
+        private static bool AddStartNode(OsmNode? startNode, XOsmFeature osmFeature, List<XOsmFeature> newOsmFeatures, List<XOsmFeature> modifiedOsmFeatures)
         {
             if (startNode != null && osmFeature is not OsmNode)
             {
                 newOsmFeatures.Add(startNode);
 
-                OsmFeature? modifiedWay = osmFeature.AddStartNode(startNode);
+                XOsmFeature? modifiedWay = osmFeature.AddStartNode(startNode);
                 if (modifiedWay != null)
                 {
                     modifiedOsmFeatures.Add(modifiedWay);
@@ -350,13 +350,13 @@ namespace Recogniser
             return false;
         }
 
-        private static bool AddEndNode(OsmNode? endNode, OsmFeature osmFeature, List<OsmFeature> newOsmFeatures, List<OsmFeature> modifiedOsmFeatures)
+        private static bool AddEndNode(OsmNode? endNode, XOsmFeature osmFeature, List<XOsmFeature> newOsmFeatures, List<XOsmFeature> modifiedOsmFeatures)
         {
             if (endNode != null && osmFeature is not OsmNode)
             {
                 newOsmFeatures.Add(endNode);
 
-                OsmFeature? modifiedWay = osmFeature.AddEndNode(endNode);
+                XOsmFeature? modifiedWay = osmFeature.AddEndNode(endNode);
                 if (modifiedWay != null)
                 {
                     modifiedOsmFeatures.Add(modifiedWay);
@@ -369,10 +369,10 @@ namespace Recogniser
         }
 
         /*
-        private static bool Reverse(GnisRecord gnisRecord, OsmFeature osmFeature, List<OsmFeature> newOsmFeatures, List<OsmFeature> modifiedOsmFeatures)
+        private static bool Reverse(GnisRecord gnisRecord, XOsmFeature osmFeature, List<XOsmFeature> newOsmFeatures, List<XOsmFeature> modifiedOsmFeatures)
         {
             // reverse the feature
-            List<OsmFeature>? reversedFeatures = osmFeature.Reverse();
+            List<XOsmFeature>? reversedFeatures = osmFeature.Reverse();
 
             if (reversedFeatures != null)
             {
@@ -383,12 +383,11 @@ namespace Recogniser
         }
         */
 
-
         private static bool ModifyName(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult)
         {
             OsmTagCollection tags = matchResult.OsmFeature.GetTagCollection();
 
-            switch (validationResult.nameValidation)
+            switch (validationResult.NameValidation)
             {
                 case GnisNameValidation.OK:
                     return false;
@@ -433,7 +432,7 @@ namespace Recogniser
             long[] newValues;
             string newValue;
 
-            switch (validationResult.featureIdValidation)
+            switch (validationResult.FeatureIdValidation)
             {
                 case GnisFeatureIdValidation.OK:
                     return false;
@@ -531,7 +530,7 @@ namespace Recogniser
 
         private bool ModifyTags(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult)
         {
-            switch (validationResult.tagValidation)
+            switch (validationResult.TagValidation)
             {
                 case GnisTagValidation.OK:
                     return false;
@@ -551,7 +550,7 @@ namespace Recogniser
             }
         }
 
-        private bool AddPrimaryTag(GnisRecord gnisRecord, OsmFeature osmFeature)
+        private bool AddPrimaryTag(GnisRecord gnisRecord, XOsmFeature osmFeature)
         {
             GnisClassAttributes gnisClassAttributes = gnisClassData.GetGnisClassAttributes(gnisRecord.FeatureClass);
 
@@ -562,7 +561,7 @@ namespace Recogniser
             return true;
         }
 
-        private bool AddSecondaryTag(GnisRecord gnisRecord, OsmFeature osmFeature)
+        private bool AddSecondaryTag(GnisRecord gnisRecord, XOsmFeature osmFeature)
         {
             GnisClassAttributes gnisClassAttributes = gnisClassData.GetGnisClassAttributes(gnisRecord.FeatureClass);
 

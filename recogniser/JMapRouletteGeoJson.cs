@@ -7,7 +7,7 @@ namespace Recogniser
 {
     using System.Text.Json.Serialization;
 
-    internal class JMapRouletteGeoJson
+    internal sealed class JMapRouletteGeoJson
     {
         [JsonPropertyName("type")]
         public string Type { get; set; } = "FeatureCollection";
@@ -23,7 +23,7 @@ namespace Recogniser
         public Cooperativework? CooperativeWork { get; set; } = null;
     }
 
-    internal class Cooperativework
+    internal sealed class Cooperativework
     {
         [JsonPropertyName("meta")]
         public CooperativeworkMeta Meta { get; set; } = new();

@@ -1,6 +1,13 @@
-﻿namespace Recogniser
+﻿// <copyright file="TagFixBuilder.cs" company="recogniser project contributors">
+// Copyright (c) 2025 recogniser project contributors.
+// Licensed under the AGPL-3.0-or-later license. See LICENSE file in the project root for full license information.
+// </copyright>
+
+namespace Recogniser
 {
-    internal class TagFixBuilder
+    using System.Globalization;
+
+    internal sealed class TagFixBuilder
     {
         private readonly GnisClassData gnisClassData;
 
@@ -16,7 +23,7 @@
             TagFixOperation tagFix = new();
             TagFixIndependentOperation tagFixIndependentOperation = new()
             {
-                Id = $"{matchResult.OsmFeature.GetOsmType()}/{matchResult.OsmFeature.Id}"
+                Id = $"{matchResult.OsmFeature.GetOsmType()}/{matchResult.OsmFeature.Id}",
             };
 
             tagFix.Data = [tagFixIndependentOperation];
@@ -39,107 +46,12 @@
             }
         }
 
-        private static void DeleteExtraGnisTags(OsmFeature osmFeature, List<TagFixDependentOperation> operations)
-        {
-            List<string> tagsToDelete = [];
-
-            OsmTagCollection tags = osmFeature.GetTagCollection();
-
-            foreach (OsmTag tag in tags)
-            {
-                if (Program.ExtraGnisTags.Contains(tag.Key))
-                {
-                    tagsToDelete.Add(tag.Key);
-                }
-            }
-
-            if (tagsToDelete.Count > 0)
-            {
-                TagFixDependentOperation operation = new()
-                {
-                    Operation = "unsetTags",
-                    Data = tagsToDelete.ToArray()
-                };
-
-                operations.Add(operation);
-            }
-        }
-
-        private bool ModifyTags(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult, List<TagFixDependentOperation> operations)
-        {
-            switch (validationResult.tagValidation)
-            {
-                case GnisTagValidation.OK:
-                    return false;
-                case GnisTagValidation.FEATURE_CLASS_PRIMARY_TAG_MISSING:
-                    return AddPrimaryTag(gnisRecord, matchResult.OsmFeature, operations);
-                case GnisTagValidation.FEATURE_CLASS_SECONDARY_TAG_MISSING:
-                    return AddSecondaryTag(gnisRecord, matchResult.OsmFeature, operations);
-                case GnisTagValidation.FEATURE_CLASS_TAGS_MISSING:
-                    bool modified = false;
-                    modified |= AddPrimaryTag(gnisRecord, matchResult.OsmFeature, operations);
-                    modified |= AddSecondaryTag(gnisRecord, matchResult.OsmFeature, operations);
-                    return modified;
-                case GnisTagValidation.NOT_PROCESSED:
-                    return false;
-                default:
-                    throw new NotImplementedException();
-            }
-        }
-
-        private bool AddSecondaryTag(GnisRecord gnisRecord, OsmFeature osmFeature, List<TagFixDependentOperation> operations)
-        {
-            GnisClassAttributes gnisClassAttributes = gnisClassData.GetGnisClassAttributes(gnisRecord.FeatureClass);
-
-            OsmTagProto[] secondaryTags = gnisClassAttributes.GetSecondaryTags();
-
-            if (secondaryTags.Length > 0)
-            {
-                OsmTagProto secondaryTag = secondaryTags[0];
-
-                TagFixDependentOperation operation = new()
-                {
-                    Operation = "setTags",
-                    Data = new Dictionary<string, string>()
-                    {
-                        { secondaryTag.Name, secondaryTag.Value }
-                    }
-                };
-
-                operations.Add(operation);
-
-                return true;
-            }
-
-            return false;
-        }
-
-        private bool AddPrimaryTag(GnisRecord gnisRecord, OsmFeature osmFeature, List<TagFixDependentOperation> operations)
-        {
-            GnisClassAttributes gnisClassAttributes = gnisClassData.GetGnisClassAttributes(gnisRecord.FeatureClass);
-
-            OsmTagProto primaryTag = gnisClassAttributes.GetPrimaryTags()[0];
-
-            TagFixDependentOperation operation = new()
-            {
-                Operation = "setTags",
-                Data = new Dictionary<string, string>()
-                {
-                    { primaryTag.Name, primaryTag.Value }
-                }
-            };
-
-            operations.Add(operation);
-
-            return true;
-        }
-
         private static bool ModifyName(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult, List<TagFixDependentOperation> operations)
         {
             TagFixDependentOperation operation;
             OsmTagCollection tags = matchResult.OsmFeature.GetTagCollection();
 
-            switch (validationResult.nameValidation)
+            switch (validationResult.NameValidation)
             {
                 case GnisNameValidation.OK:
                     return false;
@@ -153,12 +65,11 @@
                         Operation = "setTags",
                         Data = new Dictionary<string, string>()
                         {
-                            { "name", gnisRecord.FeatureName }
-                        }
+                            { "name", gnisRecord.FeatureName },
+                        },
                     };
 
                     operations.Add(operation);
-
 
                     return true;
 
@@ -180,8 +91,8 @@
                             Operation = "unsetTags",
                             Data = new string[]
                             {
-                                matchResult.NameKey
-                            }
+                                matchResult.NameKey,
+                            },
                         };
 
                         operations.Add(operation);
@@ -193,13 +104,14 @@
                             Operation = "setTags",
                             Data = new Dictionary<string, string>()
                             {
-                                { "name", name }
-                            }
+                                { "name", name },
+                            },
                         };
 
                         operations.Add(operation);
                         return true;
                     }
+
                     return false;
 
                 case GnisNameValidation.NOT_PROCESSED:
@@ -207,6 +119,32 @@
 
                 default:
                     throw new NotImplementedException();
+            }
+        }
+
+        private static void DeleteExtraGnisTags(XOsmFeature osmFeature, List<TagFixDependentOperation> operations)
+        {
+            List<string> tagsToDelete = [];
+
+            OsmTagCollection tags = osmFeature.GetTagCollection();
+
+            foreach (OsmTag tag in tags)
+            {
+                if (Program.ExtraGnisTags.Contains(tag.Key))
+                {
+                    tagsToDelete.Add(tag.Key);
+                }
+            }
+
+            if (tagsToDelete.Count > 0)
+            {
+                TagFixDependentOperation operation = new()
+                {
+                    Operation = "unsetTags",
+                    Data = tagsToDelete.ToArray(),
+                };
+
+                operations.Add(operation);
             }
         }
 
@@ -218,7 +156,7 @@
             long[] newValues;
             string newValue;
 
-            switch (validationResult.featureIdValidation)
+            switch (validationResult.FeatureIdValidation)
             {
                 case GnisFeatureIdValidation.OK:
                     return false;
@@ -231,8 +169,8 @@
                         Operation = "setTags",
                         Data = new Dictionary<string, string>()
                         {
-                            { "gnis:feature_id", gnisRecord.FeatureId }
-                        }
+                            { "gnis:feature_id", gnisRecord.FeatureId },
+                        },
                     };
 
                     operations.Add(operation);
@@ -251,8 +189,8 @@
                         Operation = "setTags",
                         Data = new Dictionary<string, string>()
                         {
-                            { "gnis:feature_id", gnisRecord.FeatureId }
-                        }
+                            { "gnis:feature_id", gnisRecord.FeatureId },
+                        },
                     };
 
                     operations.Add(operation);
@@ -272,7 +210,7 @@
                     for (int i = 0; i < oldValues.Length; i++)
                     {
                         // dangerous, but this should not throw an exception
-                        newValues[i] = long.Parse(oldValues[i]);
+                        newValues[i] = long.Parse(oldValues[i], CultureInfo.InvariantCulture);
                     }
 
                     newValue = string.Join(";", newValues);
@@ -283,8 +221,8 @@
                         Operation = "setTags",
                         Data = new Dictionary<string, string>()
                         {
-                            { "gnis:feature_id", newValue }
-                        }
+                            { "gnis:feature_id", newValue },
+                        },
                     };
 
                     operations.Add(operation);
@@ -300,8 +238,8 @@
                         Operation = "setTags",
                         Data = new Dictionary<string, string>()
                         {
-                            { "gnis:feature_id", gnisRecord.FeatureId }
-                        }
+                            { "gnis:feature_id", gnisRecord.FeatureId },
+                        },
                     };
 
                     operations.Add(operation);
@@ -312,8 +250,8 @@
                         Operation = "unsetTags",
                         Data = new string[]
                         {
-                            matchResult.FeatureIdKey
-                        }
+                            matchResult.FeatureIdKey,
+                        },
                     };
 
                     operations.Add(operation);
@@ -332,7 +270,7 @@
                     for (int i = 0; i < oldValues.Length; i++)
                     {
                         // dangerous, but this should not throw an exception
-                        newValues[i] = long.Parse(oldValues[i]);
+                        newValues[i] = long.Parse(oldValues[i], CultureInfo.InvariantCulture);
                     }
 
                     newValue = string.Join(";", newValues);
@@ -343,8 +281,8 @@
                         Operation = "unsetTags",
                         Data = new string[]
                         {
-                            matchResult.FeatureIdKey
-                        }
+                            matchResult.FeatureIdKey,
+                        },
                     };
 
                     operations.Add(operation);
@@ -355,8 +293,8 @@
                         Operation = "setTags",
                         Data = new Dictionary<string, string>()
                         {
-                            { "gnis:feature_id", newValue }
-                        }
+                            { "gnis:feature_id", newValue },
+                        },
                     };
 
                     operations.Add(operation);
@@ -369,6 +307,75 @@
                 default:
                     throw new NotImplementedException();
             }
+        }
+
+        private bool ModifyTags(GnisRecord gnisRecord, GnisMatchResult matchResult, GnisValidationResult validationResult, List<TagFixDependentOperation> operations)
+        {
+            switch (validationResult.TagValidation)
+            {
+                case GnisTagValidation.OK:
+                    return false;
+                case GnisTagValidation.FEATURE_CLASS_PRIMARY_TAG_MISSING:
+                    return AddPrimaryTag(gnisRecord, matchResult.OsmFeature, operations);
+                case GnisTagValidation.FEATURE_CLASS_SECONDARY_TAG_MISSING:
+                    return AddSecondaryTag(gnisRecord, matchResult.OsmFeature, operations);
+                case GnisTagValidation.FEATURE_CLASS_TAGS_MISSING:
+                    bool modified = false;
+                    modified |= AddPrimaryTag(gnisRecord, matchResult.OsmFeature, operations);
+                    modified |= AddSecondaryTag(gnisRecord, matchResult.OsmFeature, operations);
+                    return modified;
+                case GnisTagValidation.NOT_PROCESSED:
+                    return false;
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
+        private bool AddSecondaryTag(GnisRecord gnisRecord, XOsmFeature osmFeature, List<TagFixDependentOperation> operations)
+        {
+            GnisClassAttributes gnisClassAttributes = gnisClassData.GetGnisClassAttributes(gnisRecord.FeatureClass);
+
+            OsmTagProto[] secondaryTags = gnisClassAttributes.GetSecondaryTags();
+
+            if (secondaryTags.Length > 0)
+            {
+                OsmTagProto secondaryTag = secondaryTags[0];
+
+                TagFixDependentOperation operation = new()
+                {
+                    Operation = "setTags",
+                    Data = new Dictionary<string, string>()
+                    {
+                        { secondaryTag.Name, secondaryTag.Value },
+                    },
+                };
+
+                operations.Add(operation);
+
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool AddPrimaryTag(GnisRecord gnisRecord, XOsmFeature osmFeature, List<TagFixDependentOperation> operations)
+        {
+            GnisClassAttributes gnisClassAttributes = gnisClassData.GetGnisClassAttributes(gnisRecord.FeatureClass);
+
+            OsmTagProto primaryTag = gnisClassAttributes.GetPrimaryTags()[0];
+
+            TagFixDependentOperation operation = new()
+            {
+                Operation = "setTags",
+                Data = new Dictionary<string, string>()
+                {
+                    { primaryTag.Name, primaryTag.Value },
+                },
+            };
+
+            operations.Add(operation);
+
+            return true;
         }
     }
 }

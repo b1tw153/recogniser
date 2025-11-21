@@ -61,7 +61,7 @@ namespace Recogniser
         FEATURE_COORDINATE_EXTENT_OFF_REVERSED,
     }
 
-    internal class GnisValidator
+    internal sealed class GnisValidator
     {
         private static readonly string[] NameTags =
         {
@@ -85,15 +85,15 @@ namespace Recogniser
         {
             GnisValidationResult validationResult = new(matchResult.OsmFeature)
             {
-                featureIdValidation = ValidateFeatureId(matchResult),
+                FeatureIdValidation = ValidateFeatureId(matchResult),
 
-                nameValidation = ValidateName(matchResult),
+                NameValidation = ValidateName(matchResult),
 
-                tagValidation = ValidateTag(matchResult),
+                TagValidation = ValidateTag(matchResult),
 
-                conflictingTagValidation = ValidateConflictingTag(matchResult),
+                ConflictingTagValidation = ValidateConflictingTag(matchResult),
 
-                geometryValidation = ValidateGeometry(matchResult),
+                GeometryValidation = ValidateGeometry(matchResult),
             };
 
             return validationResult;
